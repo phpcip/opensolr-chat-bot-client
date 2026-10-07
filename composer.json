@@ -1,0 +1,23 @@
+{
+    "name": "opensolr/chat-bot-client",
+    "description": "A chatbot for any website whose content is in an Opensolr Index: mounted on one URL path of your own site, set up in its own admin page, added to your pages with one script tag. The Opensolr API searches your index, runs the tools and writes the answer; the visitor talks only to your site.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["opensolr", "chatbot", "chat", "assistant", "site search", "solr", "rag", "widget"],
+    "homepage": "https://opensolr.com",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo_sqlite": "*",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Opensolr\\ChatBot\\": "src/"
+        }
+    },
+    "bin": [
+        "bin/opensolr-chat-bot"
+    ]
+}

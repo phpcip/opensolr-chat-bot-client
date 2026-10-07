@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+$autoloaders = [
+    $GLOBALS['_composer_autoload_path'] ?? null,
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+];
+foreach ($autoloaders as $autoload) {
+    if (is_string($autoload) && is_file($autoload)) {
+        require $autoload;
+        break;
+    }
+}
+if (!class_exists(Opensolr\ChatBot\Cli::class)) {
+    fwrite(STDERR, "Run composer install first.\n");
+    exit(1);
+}
+
+exit((new Opensolr\ChatBot\Cli())->run(array_values(array_map('strval', $argv))));
