@@ -28,7 +28,13 @@ final class Store
 
     public function file(): string
     {
-        return $this->dataDir . DIRECTORY_SEPARATOR . 'chat.sqlite';
+        return $this->path('chat.sqlite');
+    }
+
+    /** A file of the data folder. */
+    public function path(string $name): string
+    {
+        return $this->dataDir . DIRECTORY_SEPARATOR . basename($name);
     }
 
     public function pdo(): \PDO

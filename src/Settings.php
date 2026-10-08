@@ -29,6 +29,9 @@ final class Settings
         'placeholder' => 'Ask a question…',
         'captcha_site_key' => '',
         'captcha_secret' => '',
+        'launcher_text' => '',
+        'accent' => '',
+        'admin_language' => '',
     ];
 
     /** @var array<string, string|int> */
@@ -61,6 +64,23 @@ final class Settings
         $zone = date_default_timezone_get();
         $values['timezone'] = self::validTimezone($zone) ? $zone : 'UTC';
         return $values;
+    }
+
+    /**
+     * The names of the number settings, in the admin's language.
+     *
+     * @return array<string, string>
+     */
+    public static function intLabels(): array
+    {
+        return [
+            'max_chars' => I18n::t('Characters per message'),
+            'max_translate_chars' => I18n::t('Characters of a text to translate'),
+            'questions_per_conversation' => I18n::t('Questions per conversation'),
+            'questions_per_visitor' => I18n::t('Questions per visitor'),
+            'window_seconds' => I18n::t('In this many seconds'),
+            'pass_hours' => I18n::t('Hours a solved captcha is valid'),
+        ];
     }
 
     /**
@@ -123,31 +143,43 @@ final class Settings
             $values['opensolr_api_key'] = $key;
         }
 
-        foreach (['instructions' => [self::INSTRUCTIONS_MAX, 'The instructions'], 'title' => [100, 'The title'], 'greeting' => [1000, 'The greeting'], 'placeholder' => [200, 'The placeholder']] as $field => [$max, $label]) {
+        $texts = [
+            'instructions' => [self::INSTRUCTIONS_MAX, I18n::t('The instructions')],
+            'title' => [100, I18n::t('The title')],
+            'greeting' => [1000, I18n::t('The greeting')],
+            'placeholder' => [200, I18n::t('The placeholder')],
+            'launcher_text' => [40, I18n::t('The text of the chat button')],
+        ];
+        foreach ($texts as $field => [$max, $label]) {
             $text = self::text($input[$field] ?? '', $field === 'instructions' || $field === 'greeting');
             if ($text === null) {
-                $errors[] = $label . ' must be valid text.';
+                $errors[] = I18n::t('{field} must be valid text.', ['field' => $label]);
             } elseif (mb_strlen($text) > $max) {
-                $errors[] = $label . ' can have at most ' . number_format($max) . ' characters.';
+                $errors[] = I18n::t('{field} can have at most {max} characters.', ['field' => $label, 'max' => number_format($max)]);
             } elseif ($field === 'title' && $text === '') {
-                $errors[] = 'The title is required.';
+                $errors[] = I18n::t('The title is required.');
             } else {
                 $values[$field] = $text;
             }
         }
+        $accent = trim($input['accent'] ?? '');
+        if ($accent !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $accent)) {
+            $errors[] = I18n::t('The accent colour must be written like #c05520.');
+        } else {
+            $values['accent'] = strtolower($accent);
+        }
+        $language = trim($input['admin_language'] ?? '');
+        if ($language !== '' && !isset(I18n::LANGUAGES[$language])) {
+            $errors[] = I18n::t('Choose a language from the list.');
+        } else {
+            $values['admin_language'] = $language;
+        }
 
-        $labels = [
-            'max_chars' => 'Characters per message',
-            'max_translate_chars' => 'Characters of a text to translate',
-            'questions_per_conversation' => 'Questions per conversation',
-            'questions_per_visitor' => 'Questions per visitor',
-            'window_seconds' => 'In this many seconds',
-            'pass_hours' => 'Hours a solved captcha is valid',
-        ];
+        $labels = self::intLabels();
         foreach (self::INTS as $field => [, $min, $max]) {
             $raw = trim($input[$field] ?? '');
             if (!ctype_digit($raw) || (int) $raw < $min || (int) $raw > $max) {
-                $errors[] = $labels[$field] . ' must be a whole number from ' . number_format($min) . ' to ' . number_format($max) . '.';
+                $errors[] = I18n::t('{field} must be a whole number from {min} to {max}.', ['field' => $labels[$field], 'min' => number_format($min), 'max' => number_format($max)]);
             } else {
                 $values[$field] = (string) (int) $raw;
             }
@@ -155,7 +187,7 @@ final class Settings
 
         $siteKey = trim($input['captcha_site_key'] ?? '');
         if ($siteKey !== '' && !preg_match('/^[A-Za-z0-9_-]{10,100}$/', $siteKey)) {
-            $errors[] = 'The reCAPTCHA site key is not valid.';
+            $errors[] = I18n::t('The reCAPTCHA site key is not valid.');
         } else {
             $values['captcha_site_key'] = $siteKey;
         }
@@ -164,13 +196,13 @@ final class Settings
             if (preg_match('/^[A-Za-z0-9_-]{10,100}$/', $secret)) {
                 $values['captcha_secret'] = $secret;
             } else {
-                $errors[] = 'The reCAPTCHA secret key is not valid.';
+                $errors[] = I18n::t('The reCAPTCHA secret key is not valid.');
             }
         }
 
         $zone = trim($input['timezone'] ?? '');
         if (!self::validTimezone($zone)) {
-            $errors[] = 'Choose a time zone from the list.';
+            $errors[] = I18n::t('Choose a time zone from the list.');
         } else {
             $values['timezone'] = $zone;
         }
@@ -187,10 +219,10 @@ final class Settings
     {
         $errors = [];
         if ($email !== '' && (strlen($email) > 254 || filter_var($email, FILTER_VALIDATE_EMAIL) === false)) {
-            $errors[] = 'The Opensolr email is not a valid email address.';
+            $errors[] = I18n::t('The Opensolr email is not a valid email address.');
         }
         if ($key !== '' && !self::validApiKey($key)) {
-            $errors[] = 'The Opensolr API key is not valid.';
+            $errors[] = I18n::t('The Opensolr API key is not valid.');
         }
         return $errors;
     }

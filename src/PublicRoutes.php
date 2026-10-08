@@ -44,7 +44,7 @@ final class PublicRoutes
         }
     }
 
-    public function config(Settings $settings): void
+    public function config(Settings $settings, Logo $logo): void
     {
         $commands = [];
         foreach (Commands::definitions($settings->int('max_translate_chars')) as $name => [$usage, $description, $example]) {
@@ -53,6 +53,9 @@ final class PublicRoutes
         $required = $settings->captchaRequired();
         Response::json(200, [
             'title' => $settings->str('title'),
+            'launcher_text' => $settings->str('launcher_text'),
+            'logo' => $logo->url($this->request->prefix()),
+            'accent' => $settings->str('accent'),
             'greeting' => $settings->str('greeting'),
             'placeholder' => $settings->str('placeholder'),
             'max_chars' => $settings->int('max_chars'),

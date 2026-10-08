@@ -15,6 +15,7 @@ final class Request
      * @param array<string, mixed> $cookies
      * @param array<string, mixed> $post
      * @param list<string> $trustedProxies
+     * @param array<string, mixed> $files
      */
     public function __construct(
         private readonly array $server,
@@ -22,7 +23,22 @@ final class Request
         private readonly array $post,
         private readonly string $basePath,
         private readonly array $trustedProxies = [],
+        private readonly array $files = [],
     ) {
+    }
+
+    /**
+     * One uploaded file of a form field: {tmp_name, size}, or null when none was sent.
+     *
+     * @return array{tmp_name: string, size: int}|null
+     */
+    public function file(string $name): ?array
+    {
+        $f = $this->files[$name] ?? null;
+        if (!is_array($f) || !is_string($f['tmp_name'] ?? null) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+        return ['tmp_name' => ($f['error'] ?? 1) === UPLOAD_ERR_OK ? $f['tmp_name'] : '', 'size' => (int) ($f['size'] ?? 0)];
     }
 
     /**
@@ -30,7 +46,7 @@ final class Request
      */
     public static function fromGlobals(string $basePath, array $trustedProxies = []): self
     {
-        return new self($_SERVER, $_COOKIE, $_POST, $basePath, $trustedProxies);
+        return new self($_SERVER, $_COOKIE, $_POST, $basePath, $trustedProxies, $_FILES);
     }
 
     public function method(): string
@@ -104,6 +120,14 @@ final class Request
         }
         $value = $this->server[$key] ?? '';
         return is_string($value) ? trim($value) : '';
+    }
+
+    /** One parameter of the query string, '' when absent. */
+    public function query(string $name, int $max = 200): string
+    {
+        parse_str((string) ($this->server['QUERY_STRING'] ?? ''), $params);
+        $value = $params[$name] ?? '';
+        return is_string($value) ? substr($value, 0, $max) : '';
     }
 
     public function cookie(string $name): string

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Opensolr\ChatBot\Admin;
 
 use Opensolr\ChatBot\Captcha;
+use Opensolr\ChatBot\I18n;
+use Opensolr\ChatBot\Logo;
 use Opensolr\ChatBot\Http\Request;
 use Opensolr\ChatBot\Http\Response;
 use Opensolr\ChatBot\OpensolrApi;
@@ -29,7 +31,7 @@ final class AdminController
     private const FIELDS = [
         'opensolr_email', 'opensolr_api_key', 'index_name', 'instructions', 'title', 'greeting', 'placeholder',
         'max_chars', 'max_translate_chars', 'questions_per_conversation', 'questions_per_visitor', 'window_seconds',
-        'captcha_site_key', 'captcha_secret', 'pass_hours', 'timezone',
+        'captcha_site_key', 'captcha_secret', 'pass_hours', 'timezone', 'launcher_text', 'accent', 'admin_language',
     ];
     private const INDEX_LIST = 'index_list';
     private const INDEX_LIST_MAX = 1000;
@@ -47,6 +49,8 @@ final class AdminController
 
     public function handle(string $route): void
     {
+        $language = $this->settings->str('admin_language');
+        I18n::use($language !== '' ? $language : I18n::negotiate($this->request->header('Accept-Language')));
         $hash = $this->store->adminPasswordHash();
         if ($hash === null) {
             Response::html(503, AdminView::noPassword(), self::HEADERS);
@@ -55,7 +59,7 @@ final class AdminController
         $this->store->purgeIfDue($this->settings->int('window_seconds'));
         $post = $this->request->method() === 'POST';
         if ($post && !$this->request->sameOrigin()) {
-            Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), 'This form was not sent from this site.', $this->captchaKey()), self::LOGIN_HEADERS);
+            Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), I18n::t('This form was not sent from this site.'), $this->captchaKey()), self::LOGIN_HEADERS);
             return;
         }
         // A captcha before any admin page loads, when the captcha is set up
@@ -80,7 +84,7 @@ final class AdminController
             return;
         }
         if ($post && !$this->session->checkCsrf($this->request->post('csrf', 200))) {
-            $this->render(['The form expired. Please try again.'], '', null, 400);
+            $this->render([I18n::t('The form expired. Please try again.')], '', null, 400);
             return;
         }
         if ($route === '/admin/logout') {
@@ -152,11 +156,11 @@ final class AdminController
     private function login(string $hash): void
     {
         if (!$this->session->checkLoginToken($this->request->post('token', 200))) {
-            $this->loginForm('The form expired. Please try again.', 400);
+            $this->loginForm(I18n::t('The form expired. Please try again.'), 400);
             return;
         }
         if ($this->session->throttled()) {
-            $this->loginForm('Too many failed sign-ins. Please try again in 15 minutes.', 429);
+            $this->loginForm(I18n::t('Too many failed sign-ins. Please try again in 15 minutes.'), 429);
             return;
         }
         if ($this->captchaKey() !== '') {
@@ -172,7 +176,7 @@ final class AdminController
         if ($password === '' || !password_verify($password, $hash)) {
             error_log('Opensolr Chat Bot: a sign-in failed (' . mb_strlen($sent) . ' characters, ' . strlen($sent) . ' bytes, ' . preg_match_all('/[^\x21-\x7E]/', $password) . ' not printable ASCII' . ($sent !== $password ? ', with spaces around' : '') . ')');
             $this->session->recordFailure();
-            $this->loginForm('Wrong password.', 401);
+            $this->loginForm(I18n::t('Wrong password.'), 401);
             return;
         }
         $this->session->clearFailures();
@@ -212,20 +216,36 @@ final class AdminController
         } elseif ($index === '' || in_array($index, $names, true)) {
             $values['index_name'] = $index;
         } else {
-            $errors[] = 'Choose the index from the list.';
+            $errors[] = I18n::t('Choose the index from the list.');
+        }
+        $logo = new Logo($this->store);
+        $upload = $this->request->file('logo');
+        if ($upload !== null && $upload['tmp_name'] === '') {
+            $errors[] = I18n::t('The logo could not be uploaded. Please try again.');
         }
         if ($errors) {
             $this->render($errors, '', $input, 400);
             return;
         }
+        if ($upload !== null) {
+            $error = $logo->save($upload['tmp_name'], $upload['size']);
+            if ($error !== null) {
+                $this->render([$error], '', $input, 400);
+                return;
+            }
+        } elseif ($this->request->post('logo_remove', 1) === '1') {
+            $logo->remove();
+        }
         $this->settings->save($values);
+        $language = $this->settings->str('admin_language');
+        I18n::use($language !== '' ? $language : I18n::negotiate($this->request->header('Accept-Language')));
         if ($accountChanged) {
             $this->store->deleteMeta(self::INDEX_LIST);
-            $this->session->setFlash('Saved. The account changed: test the connection, then choose the index.');
+            $this->session->setFlash(I18n::t('Saved. The account changed: test the connection, then choose the index.'));
         } else {
-            $this->session->setFlash($values['index_name'] === '' ? 'Saved. Choose the index the chat answers from.' : 'Saved.');
+            $this->session->setFlash($values['index_name'] === '' ? I18n::t('Saved. Choose the index the chat answers from.') : I18n::t('Saved.'));
         }
-        Response::redirect($this->url('/admin'), self::HEADERS);
+        Response::redirect($this->url('/admin') . '?tab=' . $this->tab(), self::HEADERS);
     }
 
     private function test(): void
@@ -236,7 +256,7 @@ final class AdminController
         $errors = Settings::accountErrors($email, $key);
         $key = $key !== '' ? $key : $this->settings->str('opensolr_api_key');
         if ($email === '' || $key === '') {
-            $errors[] = 'Write the email and the API key of your Opensolr account.';
+            $errors[] = I18n::t('Write the email and the API key of your Opensolr account.');
         }
         if ($errors) {
             $this->render($errors, '', $input, 400);
@@ -245,7 +265,12 @@ final class AdminController
         try {
             $indexes = array_slice((new OpensolrApi($email, $key, ''))->indexList(), 0, self::INDEX_LIST_MAX);
         } catch (\RuntimeException $e) {
-            $this->render(['The connection failed: ' . $e->getMessage()], '', $input, 200);
+            $message = match ($e->getMessage()) {
+                'ERROR_AUTHENTICATION_FAILED' => I18n::t('The email or the API key is not right.'),
+                'ERROR_SCOPED_KEY_ENDPOINT_NOT_ALLOWED' => I18n::t('This API key may not list the indexes: give it the endpoint get_index_list.'),
+                default => I18n::t('The connection failed: {error}', ['error' => $e->getMessage()]),
+            };
+            $this->render([$message], '', $input, 200);
             return;
         }
         $account = ['opensolr_email' => $email, 'opensolr_api_key' => $key];
@@ -255,9 +280,11 @@ final class AdminController
         }
         $this->settings->save($account);
         $this->store->setMeta(self::INDEX_LIST, (string) json_encode($indexes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $notice = $indexes === []
-            ? 'The account works and is saved, but it has no index yet. Create one in your Opensolr account, then test again.'
-            : 'The account works and is saved: ' . count($indexes) . ' ' . (count($indexes) === 1 ? 'index' : 'indexes') . '. Choose the index and save the settings.';
+        $notice = match (count($indexes)) {
+            0 => I18n::t('The account works and is saved, but it has no index yet. Create one in your Opensolr account, then test again.'),
+            1 => I18n::t('The account works and is saved: 1 index. Choose it and save the settings.'),
+            default => I18n::t('The account works and is saved: {count} indexes. Choose the index and save the settings.', ['count' => count($indexes)]),
+        };
         $input['index_name'] = in_array($input['index_name'], $names, true) ? $input['index_name'] : $this->settings->str('index_name');
         $this->render([], $notice, $input, 200);
     }
@@ -301,7 +328,19 @@ final class AdminController
             'errors' => $errors,
             'notice' => $notice,
             'snippet' => '<script src="' . $this->prefix . '/widget.js" defer></script>',
+            'tab' => $this->tab(),
+            'logo_url' => (new Logo($this->store))->url($this->prefix),
         ]), self::HEADERS);
+    }
+
+    /** The tab the admin was on: the one posted, else the one in the address, else the first. */
+    private function tab(): string
+    {
+        $tab = $this->request->method() === 'POST' ? $this->request->post('tab', 20) : $this->request->query('tab', 20);
+        if (in_array($tab, AdminView::TABS, true)) {
+            return $tab;
+        }
+        return $this->request->method() === 'POST' && $this->request->route() === '/admin/test' ? 'account' : AdminView::TABS[0];
     }
 
     private static function mask(string $secret): string

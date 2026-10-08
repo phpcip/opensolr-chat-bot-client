@@ -77,14 +77,14 @@ final class Captcha
         unset($ch);
         $data = is_string($response) && $status === 200 ? json_decode($response, true) : null;
         if (!is_array($data)) {
-            return 'The captcha could not be checked. Please try again.';
+            return I18n::t('The captcha could not be checked. Please try again.');
         }
         if (($data['success'] ?? false) !== true) {
-            return 'The captcha was not solved. Please try again.';
+            return I18n::t('The captcha was not solved. Please try again.');
         }
         $host = is_string($data['hostname'] ?? null) ? strtolower($data['hostname']) : '';
         if ($host !== '' && !hash_equals($request->host(), $host)) {
-            return 'The captcha was solved for another site.';
+            return I18n::t('The captcha was solved for another site.');
         }
         return null;
     }
