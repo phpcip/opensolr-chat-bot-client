@@ -186,8 +186,7 @@ CSS;
             $body .= '<select id="index_name" name="index_name"><option value="">' . self::t('Choose the index') . '</option>';
             foreach ($p['indexes'] as $index) {
                 $selected = (string) ($v['index_name'] ?? '') === $index['index_name'] ? ' selected' : '';
-                $label = $index['index_name'] . ($index['index_type'] !== '' ? ' (' . $index['index_type'] . ')' : '');
-                $body .= '<option value="' . self::e($index['index_name']) . '"' . $selected . '>' . self::e($label) . '</option>';
+                $body .= '<option value="' . self::e($index['index_name']) . '"' . $selected . '>' . self::e($index['index_name']) . '</option>';
             }
             $body .= '</select><p class="hint">' . self::t('The index the chat answers from.') . '</p>';
         } else {
