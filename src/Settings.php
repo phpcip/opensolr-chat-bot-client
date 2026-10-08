@@ -11,10 +11,10 @@ final class Settings
     public const INSTRUCTIONS_MAX = 4000;
 
     private const INTS = [
-        'max_chars' => [1000, 50, 8000],
-        'max_translate_chars' => [10000, 50, 50000],
-        'questions_per_conversation' => [20, 1, 1000],
-        'questions_per_visitor' => [30, 1, 100000],
+        'max_chars' => [1000, 50, 4000],
+        'max_translate_chars' => [10000, 50, 20000],
+        'questions_per_conversation' => [20, 1, 100],
+        'questions_per_visitor' => [30, 1, 100],
         'window_seconds' => [3600, 60, 2592000],
         'pass_hours' => [240, 1, 8760],
     ];

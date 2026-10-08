@@ -15,6 +15,10 @@ final class Assistant
     public const FAILED = 'Sorry, I could not answer that right now. Please try again in a moment.';
     public const LATE = 'The answer took too long. Please try again in a moment.';
     private const LATE_CODES = ['ERROR_STREAM_STALLED', 'ERROR_STREAM_TIMEOUT', 'ERROR_ASSISTANT_TIMEOUT'];
+    private const MESSAGES = [
+        'ERROR_VISITOR_QUESTIONS_LIMIT' => 'You have asked many questions in a short time. Please try again a little later.',
+        'ERROR_MESSAGE_TOO_LONG' => 'Your message is too long. Please make it shorter.',
+    ];
 
     public function __construct(
         private readonly OpensolrApi $api,
@@ -27,7 +31,7 @@ final class Assistant
      */
     public static function message(string $code): string
     {
-        return in_array($code, self::LATE_CODES, true) ? self::LATE : self::FAILED;
+        return self::MESSAGES[$code] ?? (in_array($code, self::LATE_CODES, true) ? self::LATE : self::FAILED);
     }
 
     /**

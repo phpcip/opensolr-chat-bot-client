@@ -223,11 +223,11 @@ All tabs are one form: Save settings saves every tab at once. Each tab and its s
 
 | Setting | Default | Allowed |
 | --- | --- | --- |
-| Characters per message | 1000 | 50 to 8,000 |
-| Characters of a text to translate | 10000 | 50 to 50,000 |
-| Questions per visitor | 30 | 1 to 100,000 |
+| Characters per message | 1000 | 50 to 4,000 |
+| Characters of a text to translate | 10000 | 50 to 20,000 |
+| Questions per visitor | 30 | 1 to 100 |
 | In this many seconds | 3600 | 60 to 2,592,000 (30 days) |
-| Questions per conversation | 20 | 1 to 1,000 |
+| Questions per conversation | 20 | 1 to 100 |
 
 What each limit does is in [Captcha and limits](#captcha-and-limits).
 
