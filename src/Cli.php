@@ -55,6 +55,6 @@ final class Cli
             shell_exec('stty echo');
             fwrite(STDOUT, "\n");
         }
-        return rtrim(is_string($line) ? $line : '', "\r\n");
+        return trim(is_string($line) ? $line : '');
     }
 }

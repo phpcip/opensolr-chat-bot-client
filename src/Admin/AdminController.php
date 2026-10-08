@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Opensolr\ChatBot\Admin;
 
+use Opensolr\ChatBot\Captcha;
 use Opensolr\ChatBot\Http\Request;
 use Opensolr\ChatBot\Http\Response;
 use Opensolr\ChatBot\OpensolrApi;
@@ -17,6 +18,11 @@ final class AdminController
 {
     private const HEADERS = [
         'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+        'X-Frame-Options' => 'DENY',
+    ];
+    // The sign-in page also loads reCAPTCHA
+    private const LOGIN_HEADERS = [
+        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/; connect-src https://www.google.com/recaptcha/; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         'X-Frame-Options' => 'DENY',
     ];
     private const FIELDS = [
@@ -48,7 +54,7 @@ final class AdminController
         $this->store->purgeIfDue($this->settings->int('window_seconds'));
         $post = $this->request->method() === 'POST';
         if ($post && !$this->request->sameOrigin()) {
-            Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), 'This form was not sent from this site.'), self::HEADERS);
+            Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), 'This form was not sent from this site.', $this->captchaKey()), self::LOGIN_HEADERS);
             return;
         }
         if ($route === '/admin/login') {
@@ -90,7 +96,13 @@ final class AdminController
             Response::redirect($this->url('/admin'), self::HEADERS);
             return;
         }
-        Response::html($status, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), $error), self::HEADERS);
+        Response::html($status, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), $error, $this->captchaKey()), self::LOGIN_HEADERS);
+    }
+
+    /** The reCAPTCHA site key when the captcha is set up, else '' (the sign-in has no captcha before the keys are saved). */
+    private function captchaKey(): string
+    {
+        return $this->settings->captchaRequired() ? $this->settings->str('captcha_site_key') : '';
     }
 
     private function login(string $hash): void
@@ -103,8 +115,18 @@ final class AdminController
             $this->loginForm('Too many failed sign-ins. Please try again in 15 minutes.', 429);
             return;
         }
-        $password = $this->request->post('password', 4096);
+        if ($this->captchaKey() !== '') {
+            $reason = (new Captcha($this->settings, $this->store, '/'))->verify($this->request->post('g-recaptcha-response', 10000), $this->request);
+            if ($reason !== null) {
+                $this->loginForm($reason, 400);
+                return;
+            }
+        }
+        $sent = $this->request->post('password', 4096);
+        // Spaces around a pasted password are not part of it
+        $password = trim($sent);
         if ($password === '' || !password_verify($password, $hash)) {
+            error_log('Opensolr Chat Bot: a sign-in failed (' . mb_strlen($sent) . ' characters' . ($sent !== $password ? ', with spaces around' : '') . ')');
             $this->session->recordFailure();
             $this->loginForm('Wrong password.', 401);
             return;

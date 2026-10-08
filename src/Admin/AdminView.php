@@ -58,7 +58,7 @@ CSS;
             . '<p class="hint">&lt;data_dir&gt; is the data_dir of the front controller of this chat. Then reload this page.</p></div>');
     }
 
-    public static function login(string $action, string $token, string $error): string
+    public static function login(string $action, string $token, string $error, string $captchaKey = ''): string
     {
         $body = '<h1>Opensolr Chat Bot</h1><p>Sign in to the admin.</p>';
         if ($error !== '') {
@@ -68,7 +68,9 @@ CSS;
             . '<input type="hidden" name="token" value="' . self::e($token) . '">'
             . '<label for="password">Password</label>'
             . '<input type="password" id="password" name="password" autocomplete="current-password" required autofocus>'
-            . '<div class="actions"><button type="submit">Sign in</button></div></form>';
+            . ($captchaKey !== '' ? '<div class="g-recaptcha" data-sitekey="' . self::e($captchaKey) . '" style="margin-top:16px"></div>' : '')
+            . '<div class="actions"><button type="submit">Sign in</button></div></form>'
+            . ($captchaKey !== '' ? '<script src="https://www.google.com/recaptcha/api.js" async defer></script>' : '');
         return self::page('Sign in · Opensolr Chat Bot', $body);
     }
 
