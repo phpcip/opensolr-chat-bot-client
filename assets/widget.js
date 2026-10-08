@@ -1271,6 +1271,8 @@
       ui.menu.appendChild(o);
     });
     ui.menu.hidden = false;
+    // The list takes the whole height of the chat above the input
+    ui.menu.style.maxHeight = Math.max(160, Math.floor(ui.foot.getBoundingClientRect().top - ui.body.getBoundingClientRect().top - 8)) + 'px';
     ui.input.setAttribute('aria-activedescendant', 'osc-opt-' + active);
     const cur = ui.menu.children[active];
     if (cur) {
