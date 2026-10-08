@@ -274,7 +274,8 @@ CSS;
             . '<p class="lead">' . self::t('Paste this before </body> on every page that shows the chat:') . '</p>'
             . '<pre>' . self::e($p['snippet']) . '</pre></div></section>';
 
-        $body .= '</div><div class="actions savebar"><button type="submit">' . self::t('Save settings') . '</button></div></form>';
+        $body .= '</div><div class="actions savebar"><button type="submit">' . self::t('Save settings') . '</button></div></form>'
+            . '<script src="' . self::e($p['prefix'] . '/admin.js') . '" defer></script>';
 
         return self::page('Opensolr Chat Bot', $body, $css);
     }

@@ -71,7 +71,7 @@ final class App
         $public = new PublicRoutes($request);
         $cookiePath = $this->basePath !== '' ? $this->basePath : '/';
 
-        if ($route === '/widget.js' || $route === '/config' || $route === '/logo') {
+        if ($route === '/widget.js' || $route === '/admin.js' || $route === '/config' || $route === '/logo') {
             if ($method !== 'GET') {
                 Response::json(405, ['error' => 'method_not_allowed'], ['Allow' => 'GET, HEAD']);
                 return;
@@ -79,7 +79,7 @@ final class App
             if ($route === '/logo') {
                 (new Logo($this->store()))->serve($request);
             } else {
-                $route === '/widget.js' ? $public->widget() : $public->config($this->settings(), new Logo($this->store()));
+                $route === '/config' ? $public->config($this->settings(), new Logo($this->store())) : $public->widget(ltrim($route, '/'));
             }
             return;
         }

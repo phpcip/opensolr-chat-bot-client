@@ -19,7 +19,7 @@ use Opensolr\ChatBot\Store;
 final class AdminController
 {
     private const HEADERS = [
-        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         'X-Frame-Options' => 'DENY',
     ];
     // The sign-in page also loads reCAPTCHA

@@ -18,9 +18,9 @@ final class PublicRoutes
     {
     }
 
-    public function widget(): void
+    public function widget(string $name = 'widget.js'): void
     {
-        $file = dirname(__DIR__) . '/assets/widget.js';
+        $file = dirname(__DIR__) . '/assets/' . ($name === 'admin.js' ? 'admin.js' : 'widget.js');
         $mtime = is_file($file) ? filemtime($file) : false;
         $size = $mtime !== false ? filesize($file) : false;
         if ($mtime === false || $size === false) {
