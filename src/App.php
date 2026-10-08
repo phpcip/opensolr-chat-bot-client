@@ -16,7 +16,7 @@ use Opensolr\ChatBot\Http\Response;
  */
 final class App
 {
-    private const ADMIN_ROUTES = ['/admin', '/admin/login', '/admin/logout', '/admin/test'];
+    private const ADMIN_ROUTES = ['/admin', '/admin/gate', '/admin/login', '/admin/logout', '/admin/test'];
 
     private string $dataDir;
     private string $basePath;

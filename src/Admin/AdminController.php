@@ -25,6 +25,7 @@ final class AdminController
         'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/; connect-src https://www.google.com/recaptcha/; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         'X-Frame-Options' => 'DENY',
     ];
+    private const GATE_COOKIE = 'opensolr_chat_gate';
     private const FIELDS = [
         'opensolr_email', 'opensolr_api_key', 'index_name', 'instructions', 'title', 'greeting', 'placeholder',
         'max_chars', 'max_translate_chars', 'questions_per_conversation', 'questions_per_visitor', 'window_seconds',
@@ -55,6 +56,19 @@ final class AdminController
         $post = $this->request->method() === 'POST';
         if ($post && !$this->request->sameOrigin()) {
             Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), 'This form was not sent from this site.', $this->captchaKey()), self::LOGIN_HEADERS);
+            return;
+        }
+        // A captcha before any admin page loads, when the captcha is set up
+        if ($route === '/admin/gate' && $post) {
+            $this->passGate();
+            return;
+        }
+        if ($this->captchaKey() !== '' && !$this->gateValid()) {
+            Response::html(200, AdminView::gate($this->url('/admin/gate'), $this->captchaKey(), ''), self::LOGIN_HEADERS);
+            return;
+        }
+        if ($route === '/admin/gate') {
+            Response::redirect($this->url('/admin/login'), self::HEADERS);
             return;
         }
         if ($route === '/admin/login') {
@@ -99,6 +113,36 @@ final class AdminController
         Response::html($status, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), $error, $this->captchaKey()), self::LOGIN_HEADERS);
     }
 
+    private function gateSign(int $ts): string
+    {
+        return hash_hmac('sha256', $ts . '|' . $this->request->clientIp() . '|' . $this->request->userAgent(), $this->store->key('admin_gate'));
+    }
+
+    private function gateValid(): bool
+    {
+        if (!preg_match('/^(\d{1,12})\.([a-f0-9]{64})$/', $this->request->cookie(self::GATE_COOKIE), $m)) {
+            return false;
+        }
+        $age = time() - (int) $m[1];
+        return $age >= -60 && $age < $this->settings->int('pass_hours') * 3600 && hash_equals($this->gateSign((int) $m[1]), $m[2]);
+    }
+
+    private function passGate(): void
+    {
+        if ($this->captchaKey() === '') {
+            Response::redirect($this->url('/admin/login'), self::HEADERS);
+            return;
+        }
+        $reason = (new Captcha($this->settings, $this->store, '/'))->verify($this->request->post('g-recaptcha-response', 10000), $this->request);
+        if ($reason !== null) {
+            Response::html(400, AdminView::gate($this->url('/admin/gate'), $this->captchaKey(), $reason), self::LOGIN_HEADERS);
+            return;
+        }
+        $ts = time();
+        Response::cookie(self::GATE_COOKIE, $ts . '.' . $this->gateSign($ts), $ts + $this->settings->int('pass_hours') * 3600, $this->url('/admin'), $this->request->isHttps(), 'Lax');
+        Response::redirect($this->url('/admin/login'), self::HEADERS);
+    }
+
     /** The reCAPTCHA site key when the captcha is set up, else '' (the sign-in has no captcha before the keys are saved). */
     private function captchaKey(): string
     {
@@ -126,7 +170,7 @@ final class AdminController
         // Spaces around a pasted password are not part of it
         $password = trim($sent);
         if ($password === '' || !password_verify($password, $hash)) {
-            error_log('Opensolr Chat Bot: a sign-in failed (' . mb_strlen($sent) . ' characters' . ($sent !== $password ? ', with spaces around' : '') . ')');
+            error_log('Opensolr Chat Bot: a sign-in failed (' . mb_strlen($sent) . ' characters, ' . strlen($sent) . ' bytes, ' . preg_match_all('/[^\x21-\x7E]/', $password) . ' not printable ASCII' . ($sent !== $password ? ', with spaces around' : '') . ')');
             $this->session->recordFailure();
             $this->loginForm('Wrong password.', 401);
             return;

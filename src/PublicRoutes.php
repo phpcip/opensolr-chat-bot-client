@@ -30,7 +30,7 @@ final class PublicRoutes
         $etag = '"' . dechex($mtime) . '-' . dechex($size) . '"';
         $headers = [
             'Content-Type' => 'application/javascript; charset=utf-8',
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => 'no-cache',
             'ETag' => $etag,
         ];
         $match = array_map('trim', explode(',', $this->request->header('If-None-Match')));

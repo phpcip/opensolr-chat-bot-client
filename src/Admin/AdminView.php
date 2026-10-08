@@ -58,6 +58,19 @@ CSS;
             . '<p class="hint">&lt;data_dir&gt; is the data_dir of the front controller of this chat. Then reload this page.</p></div>');
     }
 
+    public static function gate(string $action, string $captchaKey, string $error): string
+    {
+        $body = '<h1>Opensolr Chat Bot</h1><p>Confirm that you are a person to open the admin.</p>';
+        if ($error !== '') {
+            $body .= '<div class="box bad" role="alert">' . self::e($error) . '</div>';
+        }
+        $body .= '<form method="post" action="' . self::e($action) . '">'
+            . '<div class="g-recaptcha" data-sitekey="' . self::e($captchaKey) . '"></div>'
+            . '<div class="actions"><button type="submit">Continue</button></div></form>'
+            . '<script src="https://www.google.com/recaptcha/api.js" async defer></script>';
+        return self::page('Opensolr Chat Bot', $body);
+    }
+
     public static function login(string $action, string $token, string $error, string $captchaKey = ''): string
     {
         $body = '<h1>Opensolr Chat Bot</h1><p>Sign in to the admin.</p>';
