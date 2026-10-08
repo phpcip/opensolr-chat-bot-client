@@ -53,7 +53,13 @@ final class Identity
         if ($email === '' || !is_file($store->file())) {
             return '';
         }
-        $sign = self::sign($store, $email);
+        // A database that cannot be read leaves the visitor anonymous, never breaks the site's page
+        try {
+            $sign = self::sign($store, $email);
+        } catch (\Throwable $e) {
+            error_log('Opensolr Chat Bot: the identity of a signed-in visitor could not be signed: ' . $e->getMessage());
+            return '';
+        }
         return ' data-ident="' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '" data-ident-sig="' . $sign . '"';
     }
 }
