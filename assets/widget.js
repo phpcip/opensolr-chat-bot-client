@@ -203,6 +203,9 @@
   let built = false;
   let conv = null;
   let busy = false;
+  // Follow the answer down until the visitor scrolls up; back at the bottom, follow again
+  let follow = true;
+  let lastTop = 0;
   let failsafe = 0;
   let sent = [];
   let recall = -1;
@@ -501,6 +504,21 @@
     ui.log.setAttribute('aria-label', T.log);
     ui.log.setAttribute('aria-busy', 'false');
     ui.log.tabIndex = 0;
+    ui.log.addEventListener('scroll', function () {
+      const l = ui.log;
+      if (l.scrollTop < lastTop - 1) {
+        follow = false;
+      }
+      if (l.scrollHeight - l.scrollTop - l.clientHeight < 8) {
+        follow = true;
+      }
+      lastTop = l.scrollTop;
+    }, { passive: true });
+    ui.log.addEventListener('wheel', function (e) {
+      if (e.deltaY < 0) {
+        follow = false;
+      }
+    }, { passive: true });
     body.appendChild(ui.log);
 
     ui.foot = el('div', 'foot');
@@ -807,13 +825,9 @@
     }
   }
 
-  function nearBottom() {
-    const l = ui.log;
-    return l.scrollHeight - l.scrollTop - l.clientHeight < 60;
-  }
-
   function scrollBottom() {
     ui.log.scrollTop = ui.log.scrollHeight;
+    lastTop = ui.log.scrollTop;
   }
 
   function setBusy(on) {
@@ -976,9 +990,8 @@
   }
 
   function paint(a) {
-    const stick = nearBottom();
     fill(a.md, a.text);
-    if (stick) {
+    if (follow) {
       scrollBottom();
     }
   }
@@ -987,6 +1000,7 @@
     if (!a) {
       a = answerBox();
       ui.log.appendChild(a.box);
+      follow = true;
       scrollBottom();
     }
     setBusy(true);
@@ -1002,7 +1016,7 @@
       window.cancelAnimationFrame(a.raf);
       a.raf = 0;
     }
-    const stick = nearBottom();
+    const stick = follow;
     if (a.text) {
       fill(a.md, a.text);
     }
