@@ -345,9 +345,12 @@ final class AdminController
             'errors' => $errors,
             'notice' => $notice,
             'snippet' => '<script src="' . $this->prefix . '/widget.js" defer></script>',
-            'snippet_ident' => '<script src="' . $this->prefix . '/widget.js" data-ident="visitor@example.com" data-ident-sig="<signature>" defer></script>',
+            'snippet_ident' => '<script src="' . $this->prefix . '/widget.js" data-ident="EMAIL" data-ident-sig="SIGNATURE" defer></script>',
             'snippet_php' => '<script src="' . $this->prefix . '/widget.js"<?= \\Opensolr\\ChatBot\\Identity::attributes(' . var_export($this->store->dir(), true) . ', $email) ?> defer></script>',
+            'snippet_other' => "Python:\nimport hmac, hashlib\nsignature = hmac.new(IDENTITY_KEY.encode(), email.strip().lower().encode(), hashlib.sha256).hexdigest()\n\n"
+                . "Node.js:\nconst crypto = require('crypto');\nconst signature = crypto.createHmac('sha256', IDENTITY_KEY).update(email.trim().toLowerCase()).digest('hex');",
             'ident_key' => Identity::key($this->store),
+            'example_sig' => Identity::sign($this->store, 'visitor@example.com'),
             'tab' => $this->tab(),
             'logo_url' => (new Logo($this->store))->url($this->prefix),
         ]), self::HEADERS);

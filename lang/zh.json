@@ -110,9 +110,6 @@
     "Stats": "统计",
     "History": "历史",
     "Signed-in visitors": "已登录的访客",
-    "On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "在已登录您网站的访客的页面上，把电子邮件地址及其签名加到同一个标签上。这样统计和历史就会显示是谁提问的；没有有效签名的访客是匿名的，因此谁也无法冒充别人。",
-    "From PHP, the package writes both attributes (empty for a visitor who is not signed in):": "在 PHP 中，本软件包会写出这两个属性（未登录的访客为空）：",
-    "From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.": "在其他语言中：签名是用此身份密钥对小写电子邮件地址计算的 HMAC-SHA256，以十六进制书写。请把密钥留在服务器上，绝不要放进页面。",
     "Unknown": "未知",
     "Today": "今天",
     "7 days": "7 天",
@@ -232,5 +229,15 @@
     "Distances": "距离",
     "Postal codes": "邮政编码",
     "IP addresses": "IP 地址",
-    "Language and sentiment": "语言和情感"
+    "Language and sentiment": "语言和情感",
+    "When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:": "当您的网站有账户时，聊天可以知道是谁提问的：统计和历史会显示已登录访客的电子邮件地址，而不是匿名。在已登录访客的页面上，标签带有电子邮件地址及其签名：",
+    "EMAIL is the visitor's email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "EMAIL 是访客的电子邮件地址，按 HTML 属性的写法书写。SIGNATURE 是用此聊天的身份密钥对小写电子邮件地址计算的 HMAC-SHA256，以十六进制书写（64 个字符）。您的页面在服务器上用任何语言计算它。未登录的访客得到此标签页的第一个标签，不带这两个属性。没有有效签名的访客是匿名的，因此谁也无法冒充别人。",
+    "The identity key:": "身份密钥：",
+    "Keep it on your server, never in a page. It changes only if the signing secret of this chat is replaced.": "请把它留在服务器上，绝不要放进页面。只有在此聊天的签名密钥被替换时它才会改变。",
+    "Pages made in PHP:": "用 PHP 生成的页面：",
+    "the package writes both attributes, signed, and nothing when $email is empty.": "软件包会写出这两个已签名的属性，$email 为空时什么都不写。",
+    "Pages made in another language:": "用其他语言生成的页面：",
+    "make the signature with the identity key, for example:": "用身份密钥计算签名，例如：",
+    "To check your code: for visitor@example.com it must give": "检查您的代码：对 visitor@example.com 必须得到",
+    "Every language, step by step:": "每种语言的详细步骤："
 }

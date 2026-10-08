@@ -110,9 +110,6 @@
     "Stats": "Statistici",
     "History": "Istoric",
     "Signed-in visitors": "Vizitatori autentificați",
-    "On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "Pe paginile unui vizitator autentificat pe site-ul dvs., adăugați adresa de e-mail și semnătura ei în același tag. Statisticile și istoricul arată atunci cine a întrebat; fără o semnătură validă vizitatorul este anonim, așa că nimeni nu se poate da drept altcineva.",
-    "From PHP, the package writes both attributes (empty for a visitor who is not signed in):": "Din PHP, pachetul scrie ambele atribute (gol pentru un vizitator neautentificat):",
-    "From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.": "Din alt limbaj: semnătura este HMAC-SHA256 al adresei de e-mail scrise cu litere mici, cu această cheie de identitate, în hex. Țineți cheia pe server, niciodată într-o pagină.",
     "Unknown": "Necunoscut",
     "Today": "Azi",
     "7 days": "7 zile",
@@ -232,5 +229,15 @@
     "Distances": "Distanțe",
     "Postal codes": "Coduri poștale",
     "IP addresses": "Adrese IP",
-    "Language and sentiment": "Limbă și sentiment"
+    "Language and sentiment": "Limbă și sentiment",
+    "When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:": "Când site-ul dvs. are conturi, chatul poate ști cine a întrebat: Statisticile și Istoricul arată atunci adresa de e-mail a vizitatorului autentificat în loc de Anonim. Pe paginile unui vizitator autentificat, tagul poartă adresa de e-mail și semnătura ei:",
+    "EMAIL is the visitor's email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "EMAIL este adresa de e-mail a vizitatorului, scrisă pentru un atribut HTML. SIGNATURE este HMAC-SHA256 al acelei adrese scrise cu litere mici, cu cheia de identitate a acestui chat, în hex (64 de caractere). Paginile dvs. o calculează pe server, în orice limbaj. Un vizitator neautentificat primește primul tag din acest tab, fără cele două atribute. Fără o semnătură validă vizitatorul este anonim, așa că nimeni nu se poate da drept altcineva.",
+    "The identity key:": "Cheia de identitate:",
+    "Keep it on your server, never in a page. It changes only if the signing secret of this chat is replaced.": "Țineți-o pe server, niciodată într-o pagină. Se schimbă doar dacă se înlocuiește secretul de semnare al acestui chat.",
+    "Pages made in PHP:": "Pagini făcute în PHP:",
+    "the package writes both attributes, signed, and nothing when $email is empty.": "pachetul scrie ambele atribute, semnate, și nimic când $email este gol.",
+    "Pages made in another language:": "Pagini făcute în alt limbaj:",
+    "make the signature with the identity key, for example:": "calculați semnătura cu cheia de identitate, de exemplu:",
+    "To check your code: for visitor@example.com it must give": "Ca să vă verificați codul: pentru visitor@example.com trebuie să dea",
+    "Every language, step by step:": "Fiecare limbaj, pas cu pas:"
 }

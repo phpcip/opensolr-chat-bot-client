@@ -180,7 +180,7 @@ CSS;
      *     prefix: string, csrf: string, values: array<string, string|int>, api_key_mask: string,
      *     captcha_secret_mask: string, indexes: list<array{index_name: string, index_type: string}>,
      *     errors: list<string>, notice: string, snippet: string, snippet_ident: string, snippet_php: string,
-     *     ident_key: string, tab: string, logo_url: string
+     *     snippet_other: string, ident_key: string, example_sig: string, tab: string, logo_url: string
      * } $p
      */
     public static function settings(array $p): string
@@ -313,12 +313,18 @@ CSS;
             . '<p class="lead">' . self::t('Paste this before </body> on every page that shows the chat:') . '</p>'
             . '<pre>' . self::e($p['snippet']) . '</pre>'
             . '<h3>' . self::t('Signed-in visitors') . '</h3>'
-            . '<p>' . self::t('On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.') . '</p>'
+            . '<p>' . self::t('When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:') . '</p>'
             . '<pre>' . self::e($p['snippet_ident']) . '</pre>'
-            . '<p class="hint">' . self::t('From PHP, the package writes both attributes (empty for a visitor who is not signed in):') . '</p>'
+            . '<p>' . self::t('EMAIL is the visitor\'s email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.') . '</p>'
+            . '<p><strong>' . self::t('The identity key:') . '</strong></p>'
+            . '<pre>' . self::e($p['ident_key']) . '</pre>'
+            . '<p class="hint">' . self::t('Keep it on your server, never in a page. It changes only if the signing secret of this chat is replaced.') . '</p>'
+            . '<p><strong>' . self::t('Pages made in PHP:') . '</strong> ' . self::t('the package writes both attributes, signed, and nothing when $email is empty.') . '</p>'
             . '<pre>' . self::e($p['snippet_php']) . '</pre>'
-            . '<p class="hint">' . self::t('From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.') . '</p>'
-            . '<pre>' . self::e($p['ident_key']) . '</pre></div></section>';
+            . '<p><strong>' . self::t('Pages made in another language:') . '</strong> ' . self::t('make the signature with the identity key, for example:') . '</p>'
+            . '<pre>' . self::e($p['snippet_other']) . '</pre>'
+            . '<p class="hint">' . self::t('To check your code: for visitor@example.com it must give') . ' <code>' . self::e($p['example_sig']) . '</code>. '
+            . self::t('Every language, step by step:') . ' <a href="https://opensolr.com/opensolr-chat-bot-docs/signed-in-visitors" target="_blank" rel="noopener">https://opensolr.com/opensolr-chat-bot-docs/signed-in-visitors</a></p></div></section>';
 
         $body .= '</div><div class="actions savebar"><button type="submit">' . self::t('Save settings') . '</button></div></form>'
             . '<script src="' . self::e($p['prefix'] . '/admin.js') . '" defer></script>';

@@ -258,7 +258,7 @@ This is the language of the admin only. The chat answers every visitor in the vi
 
 ### Add to your pages
 
-Shows the script tag for your URL path, ready to copy, and how to tell the chat who is signed in: the attributes, the PHP call and the identity key. See [Add the chat to your pages](#add-the-chat-to-your-pages) and [Signed-in visitors](#signed-in-visitors).
+Shows the script tag for your URL path, ready to copy, and how to tell the chat who is signed in: the tag of a signed-in visitor, the identity key, the PHP line, examples in Python and Node.js, and the signature your chat expects for `visitor@example.com`, to check your code. See [Add the chat to your pages](#add-the-chat-to-your-pages) and [Signed-in visitors](#signed-in-visitors).
 
 ## Stats
 
@@ -308,22 +308,51 @@ Paste the script tag before `</body>` on every page that shows the chat:
 
 ## Signed-in visitors
 
-To see who asked, add the visitor's email and its signature to the script tag on the pages of a visitor who is signed in to your site:
+When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. Your pages can be made in any language; only the chat itself runs on PHP.
+
+On the pages of a signed-in visitor, the script tag carries the email and its signature:
 
 ```html
-<script src="/opensolr-chat/widget.js" data-ident="visitor@example.com" data-ident-sig="<signature>" defer></script>
+<script src="/opensolr-chat/widget.js" data-ident="EMAIL" data-ident-sig="SIGNATURE" defer></script>
 ```
 
-From PHP, the package writes both attributes for you, escaped, and nothing for a visitor who is not signed in (`$email` is the signed-in visitor's email, or an empty string):
+- `EMAIL` is the visitor's email, escaped for an HTML attribute.
+- `SIGNATURE` is HMAC-SHA256 of that email in lower case, with the **identity key** of the chat, written in hex (64 characters).
+- The identity key is in the "Add to your pages" tab of the admin. Keep it on your server, never in a page. It changes only if the chat's signing secret is replaced.
+- A visitor who is not signed in gets the plain tag, without the two attributes.
+- A visitor is signed in only when the signature is valid for that email. Anything else (no email, no signature, a wrong one) is an anonymous visitor, so nobody can pass for somebody else. The email is kept in lower case, and a conversation that starts anonymous and continues signed in takes the email.
+
+### Pages made in PHP
+
+The package writes both attributes, signed and escaped, and nothing when `$email` is empty. The first argument is the `data_dir` of your front controller:
 
 ```php
 <script src="/opensolr-chat/widget.js"<?= \Opensolr\ChatBot\Identity::attributes('/opt/opensolr-chat', $email) ?> defer></script>
 ```
 
-From another language, the signature is HMAC-SHA256 of the email in lower case with the identity key shown in the "Add to your pages" tab, written in hex. Keep the key on your server, never in a page.
+Without the package on the page's side (another PHP application), sign it yourself:
 
-- A visitor is signed in only when the signature is valid for that email. Anything else (no email, no signature, a wrong one) is an anonymous visitor, so nobody can pass for somebody else.
-- The email is kept in lower case. A conversation that starts anonymous and continues signed in takes the email.
+```php
+$signature = hash_hmac('sha256', strtolower(trim($email)), IDENTITY_KEY);
+```
+
+### Python
+
+```python
+import hmac, hashlib
+signature = hmac.new(IDENTITY_KEY.encode(), email.strip().lower().encode(), hashlib.sha256).hexdigest()
+```
+
+### Node.js
+
+```js
+const crypto = require('crypto');
+const signature = crypto.createHmac('sha256', IDENTITY_KEY).update(email.trim().toLowerCase()).digest('hex');
+```
+
+### Any other language
+
+HMAC with SHA-256, the key being the identity key as text and the message the email in lower case, then the result in lower-case hex. To check your code, the "Add to your pages" tab shows the signature your chat expects for `visitor@example.com`: your code must give the same.
 
 ## What visitors get
 

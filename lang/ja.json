@@ -110,9 +110,6 @@
     "Stats": "統計",
     "History": "履歴",
     "Signed-in visitors": "ログイン中の訪問者",
-    "On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "サイトにログインしている訪問者のページでは、メールアドレスとその署名を同じタグに追加してください。統計と履歴に誰が質問したかが表示されます。有効な署名がない訪問者は匿名になるため、誰も他人になりすますことはできません。",
-    "From PHP, the package writes both attributes (empty for a visitor who is not signed in):": "PHP からは、パッケージが両方の属性を書き出します（ログインしていない訪問者には空）：",
-    "From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.": "ほかの言語からは：署名は、小文字にしたメールアドレスのこの ID キーによる HMAC-SHA256 を 16 進数で書いたものです。キーはサーバーに置き、ページには決して入れないでください。",
     "Unknown": "不明",
     "Today": "今日",
     "7 days": "7 日間",
@@ -232,5 +229,15 @@
     "Distances": "距離",
     "Postal codes": "郵便番号",
     "IP addresses": "IP アドレス",
-    "Language and sentiment": "言語と感情"
+    "Language and sentiment": "言語と感情",
+    "When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:": "サイトにアカウントがある場合、チャットは誰が質問したかを知ることができます。統計と履歴には、匿名ではなくログイン中の訪問者のメールアドレスが表示されます。ログイン中の訪問者のページでは、タグにメールアドレスとその署名を付けます：",
+    "EMAIL is the visitor's email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "EMAIL は訪問者のメールアドレスで、HTML 属性として書いたものです。SIGNATURE は、小文字にしたそのメールアドレスのこのチャットの ID キーによる HMAC-SHA256 を 16 進数（64 文字）で書いたものです。ページはサーバー上で、どの言語でも作れます。ログインしていない訪問者には、このタブの最初のタグを 2 つの属性なしで出します。有効な署名がない訪問者は匿名になるため、誰も他人になりすますことはできません。",
+    "The identity key:": "ID キー：",
+    "Keep it on your server, never in a page. It changes only if the signing secret of this chat is replaced.": "サーバーに置き、ページには決して入れないでください。このチャットの署名用シークレットを置き換えたときだけ変わります。",
+    "Pages made in PHP:": "PHP で作るページ：",
+    "the package writes both attributes, signed, and nothing when $email is empty.": "パッケージが両方の属性を署名付きで書き出し、$email が空のときは何も書きません。",
+    "Pages made in another language:": "ほかの言語で作るページ：",
+    "make the signature with the identity key, for example:": "ID キーで署名を作ります。例：",
+    "To check your code: for visitor@example.com it must give": "コードの確認：visitor@example.com では次の値になるはずです",
+    "Every language, step by step:": "各言語の手順："
 }

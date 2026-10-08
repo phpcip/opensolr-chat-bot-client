@@ -110,9 +110,6 @@
     "Stats": "Statistiques",
     "History": "Historique",
     "Signed-in visitors": "Visiteurs connectés",
-    "On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "Sur les pages d'un visiteur connecté à votre site, ajoutez l'adresse e-mail et sa signature à la même balise. Les statistiques et l'historique montrent alors qui a demandé ; sans signature valide, le visiteur est anonyme, donc personne ne peut se faire passer pour un autre.",
-    "From PHP, the package writes both attributes (empty for a visitor who is not signed in):": "En PHP, le paquet écrit les deux attributs (vide pour un visiteur non connecté) :",
-    "From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.": "Depuis un autre langage : la signature est le HMAC-SHA256 de l'adresse e-mail en minuscules, avec cette clé d'identité, écrit en hexadécimal. Gardez la clé sur votre serveur, jamais dans une page.",
     "Unknown": "Inconnu",
     "Today": "Aujourd'hui",
     "7 days": "7 jours",
@@ -232,5 +229,15 @@
     "Distances": "Distances",
     "Postal codes": "Codes postaux",
     "IP addresses": "Adresses IP",
-    "Language and sentiment": "Langue et sentiment"
+    "Language and sentiment": "Langue et sentiment",
+    "When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:": "Quand votre site a des comptes, le chat peut savoir qui a demandé : les Statistiques et l'Historique montrent alors l'adresse e-mail d'un visiteur connecté au lieu d'Anonyme. Sur les pages d'un visiteur connecté, la balise porte l'adresse e-mail et sa signature :",
+    "EMAIL is the visitor's email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.": "EMAIL est l'adresse e-mail du visiteur, écrite pour un attribut HTML. SIGNATURE est le HMAC-SHA256 de cette adresse en minuscules, avec la clé d'identité de ce chat, écrit en hexadécimal (64 caractères). Vos pages la calculent sur votre serveur, dans n'importe quel langage. Un visiteur non connecté reçoit la première balise de cet onglet, sans les deux attributs. Sans signature valide, le visiteur est anonyme, donc personne ne peut se faire passer pour un autre.",
+    "The identity key:": "La clé d'identité :",
+    "Keep it on your server, never in a page. It changes only if the signing secret of this chat is replaced.": "Gardez-la sur votre serveur, jamais dans une page. Elle ne change que si le secret de signature de ce chat est remplacé.",
+    "Pages made in PHP:": "Pages faites en PHP :",
+    "the package writes both attributes, signed, and nothing when $email is empty.": "le paquet écrit les deux attributs, signés, et rien quand $email est vide.",
+    "Pages made in another language:": "Pages faites dans un autre langage :",
+    "make the signature with the identity key, for example:": "calculez la signature avec la clé d'identité, par exemple :",
+    "To check your code: for visitor@example.com it must give": "Pour vérifier votre code : pour visitor@example.com, il doit donner",
+    "Every language, step by step:": "Chaque langage, pas à pas :"
 }
