@@ -367,10 +367,18 @@ Compression must be off for the chat path. The example `.htaccess` already does 
 SetEnvIf Request_URI "/chat$" no-gzip=1 dont-vary=1
 ```
 
-Then reload Apache:
+PHP-FPM must not buffer or compress the answer either. In the `php.ini` of PHP-FPM (for example `/etc/php/8.3/fpm/php.ini`):
+
+```ini
+output_buffering = Off
+zlib.output_compression = Off
+```
+
+Then reload Apache and restart PHP-FPM (with your PHP version):
 
 ```sh
 sudo apachectl configtest && sudo systemctl reload apache2
+sudo systemctl restart php8.3-fpm
 ```
 
 ### Apache with mod_php
