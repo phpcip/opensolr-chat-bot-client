@@ -8,7 +8,10 @@ You install it with Composer, mount it on one URL path of your own site, set it 
 - [Requirements](#requirements)
 - [Install](#install)
 - [The admin](#the-admin)
+- [Stats](#stats)
+- [History](#history)
 - [Add the chat to your pages](#add-the-chat-to-your-pages)
+- [Signed-in visitors](#signed-in-visitors)
 - [What visitors get](#what-visitors-get)
 - [Commands](#commands)
 - [Captcha and limits](#captcha-and-limits)
@@ -26,6 +29,7 @@ You install it with Composer, mount it on one URL path of your own site, set it 
 - The assistant knows the current date and time in your time zone, and can look for your latest content.
 - Every visitor is answered in their own language.
 - Commands such as `/search`, `/time`, `/rate` or `/translate` give a direct answer without waiting for the assistant.
+- Stats and a 30-day history of every conversation in the admin: who asked (signed-in email or anonymous), from which country, IP address and page, what the assistant searched for, what it answered, how fast, what the visitors rated and which links they opened.
 - It runs on your server as one PHP front controller. Its data (a SQLite database and the logo) stays in a folder you choose: no database server.
 - Open source, MIT license.
 
@@ -37,6 +41,7 @@ You install it with Composer, mount it on one URL path of your own site, set it 
 - A web server that can send every request of one URL path to one PHP file (Apache with `mod_rewrite`, nginx, or similar).
 - HTTPS on your site is recommended: the admin and captcha cookies are marked `Secure` when the request is HTTPS.
 - Optional: a Google reCAPTCHA v2 ("I'm not a robot" checkbox) site key and secret key, for the captcha.
+- Optional: SQLite with FTS5 (most PHP builds have it), for the search by words in the History. Without it the History has every other filter.
 
 ## Install
 
@@ -176,7 +181,7 @@ If something does not work, your PHP error log has a line starting with `Opensol
 3. Sign in with the password. Five failed sign-ins from one IP address in 15 minutes block sign-ins from that address for up to 15 minutes.
 4. The session ends with Sign out, when the browser is closed, or after 2 hours without activity.
 
-All tabs are one form: Save settings saves every tab at once. Each tab and its settings follow.
+Stats and History are pages of their own, described after the settings. The other tabs are one form: Save settings saves every tab at once. Each tab and its settings follow.
 
 ### Account
 
@@ -253,7 +258,38 @@ This is the language of the admin only. The chat answers every visitor in the vi
 
 ### Add to your pages
 
-Shows the script tag for your URL path, ready to copy. See the next section.
+Shows the script tag for your URL path, ready to copy, and how to tell the chat who is signed in: the attributes, the PHP call and the identity key. See [Add the chat to your pages](#add-the-chat-to-your-pages) and [Signed-in visitors](#signed-in-visitors).
+
+## Stats
+
+The Stats page of the admin, for today, the last 7 days or the last 30 days. Today and 7 days are compared with the period before them.
+
+- **Totals:** messages (questions, commands, translations), conversations started, visitors (different IP addresses), signed-in users and their share of the messages, countries, the share of answers that came, the share of answers that searched your site and gave no link to it, the median time to the first word, errors and timeouts, messages refused by the limits, good and bad ratings, and the share of answers with a link opened.
+- **Messages per day** over the 30 days: answered, failed and refused.
+- **Countries:** messages, conversations and visitors per country, with its flag.
+- **Signed-in users:** each email with its country, messages, conversations and last message.
+- **What people search for:** the words the assistant searched your site for.
+- **Searched the site, answered with no link:** the latest questions the assistant searched your site for and answered without linking a page of it. These show what your index may be missing.
+- **Pages cited the most**, **links opened from the answers**, **pages people ask from**, **what the assistant used** (searches and lookups), **commands and translations**, and the **languages of the browsers**.
+
+Every country, email, word, link and page on the page opens the History filtered on it. Times are in the time zone of the Assistant tab.
+
+The numbers come from counters kept per day as each message is recorded, and from their sums over the 30 days. The page reads those counters, never the messages, so it stays fast whatever the traffic.
+
+## History
+
+The History page lists the conversations of the last 30 days, the newest first, 50 per page.
+
+- Each row: the time of the last message, the visitor (the email when signed in, else Anonymous), the country with its flag and the city, the IP address, the page, the number of messages, the first question, and marks for errors, answers with no link, answers rated bad and links opened.
+- Filters: period, signed in or anonymous, country, the kind of conversation (with errors or timeouts, with an answer with no link, with an answer rated bad, with a link opened), email, IP address, page, and words in the questions, the answers and the assistant's searches. Every email, country, IP address and page in the list is a link that filters on it.
+- Clicking a conversation opens it whole in a dialog: the visitor, the place, the IP address, the page, the language, when it started and ended, then every message with what the assistant searched for, the answer with its links, the error if there was one, the time to the first word and the total time, the rating and the links opened. Escape or Close goes back to the list; the dialog has its own address, so it can be shared with someone who can sign in to the admin.
+- **Deleting:** a conversation, every conversation of an email, or every conversation of an IP address, from the dialog. The admin asks once more before it deletes.
+
+**What is recorded.** For every message: its conversation, the time, the visitor's IP address, the signed-in email (when signed), the page it was asked from (without its query string), the browser's language, the question, the answer, the assistant's searches and lookups, the links of the answer, how it ended (answered, error, timeout, refused by a limit of the Opensolr API), the time to the first word and the total time. Then the visitor's rating and the links opened, when there are any. A message refused by the chat's own limits (too long, too many in the conversation, too many from the visitor) is counted in the Stats and not stored.
+
+**The country** of an IP address is looked up once, with the Opensolr API (`ip_geo`), after the answer was sent, so the visitor never waits for it. A lookup that fails keeps nothing and is tried again at the next question. Private and reserved addresses are not looked up.
+
+**30 days.** Messages, conversations, places and counters older than 30 days are deleted automatically, in small batches.
 
 ## Add the chat to your pages
 
@@ -267,7 +303,27 @@ Paste the script tag before `</body>` on every page that shows the chat:
 - The pages and the chat must be on the same host name: the chat answers only requests sent from its own site.
 - The widget is drawn in its own shadow DOM: your site's CSS does not change it, and its CSS does not change your site.
 - Until the Account tab is set up, the chat answers "This chat is not set up yet."
+- The widget sends the address of the page with each question (for the Stats and the History; the query string is dropped).
 - If your pages send a `Content-Security-Policy`, it must allow the script and requests to your own site (`script-src 'self'`, `connect-src 'self'`, `img-src 'self'` for the logo) and inline styles (`style-src 'unsafe-inline'`, the widget's styles). With the captcha on, also allow Google reCAPTCHA: `script-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/` and `frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/`.
+
+## Signed-in visitors
+
+To see who asked, add the visitor's email and its signature to the script tag on the pages of a visitor who is signed in to your site:
+
+```html
+<script src="/opensolr-chat/widget.js" data-ident="visitor@example.com" data-ident-sig="<signature>" defer></script>
+```
+
+From PHP, the package writes both attributes for you, escaped, and nothing for a visitor who is not signed in (`$email` is the signed-in visitor's email, or an empty string):
+
+```php
+<script src="/opensolr-chat/widget.js"<?= \Opensolr\ChatBot\Identity::attributes('/opt/opensolr-chat', $email) ?> defer></script>
+```
+
+From another language, the signature is HMAC-SHA256 of the email in lower case with the identity key shown in the "Add to your pages" tab, written in hex. Keep the key on your server, never in a page.
+
+- A visitor is signed in only when the signature is valid for that email. Anything else (no email, no signature, a wrong one) is an anonymous visitor, so nobody can pass for somebody else.
+- The email is kept in lower case. A conversation that starts anonymous and continues signed in takes the email.
 
 ## What visitors get
 
@@ -275,6 +331,7 @@ Paste the script tag before `</body>` on every page that shows the chat:
 - **Formatted answers.** Paragraphs, lists, tables and code. Links open in a new tab. Only `http` and `https` links become links, and no HTML from an answer is ever put into your page.
 - **Following the answer.** The window scrolls with the answer as it is written. Scrolling up stops that, so the visitor can read; back at the bottom, it follows again.
 - **One question at a time.** While an answer is written, the message box, Send and New chat are locked.
+- **Rating an answer.** Two buttons under every answer of the assistant and every translation: good and bad. Clicking the pressed one again takes the rating back. The rating is kept with the conversation in the browser.
 - **New chat.** Starts a new conversation.
 - **History in the browser.** The conversation (its last 100 messages) is kept in the visitor's browser, survives page loads and is the same in every tab of your site. A chat window left open stays open on the next page of the same tab. With each question the assistant receives up to the 10 messages before it, without the commands.
 - **Arrow Up / Arrow Down.** Bring back the questions sent before, like a shell. Arrow Down past the newest brings back what was being written.
@@ -334,7 +391,7 @@ Every limit is checked on your server before anything is sent to the Opensolr AP
 | Questions per conversation | Commands are not counted. Past the limit the visitor is asked to start a new chat with the New chat button. The count of a conversation is kept for 24 hours after its last question. |
 | One question at a time | A second question from the same IP address while an answer is being written is refused: "Please wait for the answer to your last question." |
 
-IP addresses are never stored: the counters are kept under keyed hashes, and old rows are deleted automatically.
+The counters of the limits are kept under keyed hashes, and old rows are deleted automatically. The [History](#history) keeps each message with the visitor's IP address for 30 days.
 
 ## Streaming through your server
 
@@ -420,7 +477,9 @@ composer update opensolr/chat-bot-client
 - **No secrets in `/config`.** The widget's public configuration holds only what the widget shows: the title, the button text, the logo address, the accent colour, the greeting, the placeholder, the message and conversation limits, whether the captcha is on and its site key, the commands and the language codes.
 - **Admin pages** are sent with a strict `Content-Security-Policy`, `X-Frame-Options: DENY` and `noindex`.
 - **The logo** is accepted only when its content is a PNG, JPEG, GIF or WebP image, and served with `X-Content-Type-Options: nosniff`.
-- **Visitor data.** IP addresses are kept only as keyed hashes in the counters of the limits. With each question to the assistant, your server sends the Opensolr API the question, the messages before it, your instructions and time zone, and the visitor's IP address. A command sends what is written after it; `/time` and `/ip` with nothing after them send the visitor's IP address. With the captcha on, Google receives the captcha answer and the visitor's IP address.
+- **Visitor data.** The History keeps, for 30 days, every message with its answer, the visitor's IP address, country and city, the signed-in email, the page and the browser's language; then everything older is deleted. The admin can delete a conversation, or everything of an email or an IP address, at any time. With each question to the assistant, your server sends the Opensolr API the question, the messages before it, your instructions and time zone, and the visitor's IP address. A command sends what is written after it; `/time` and `/ip` with nothing after them send the visitor's IP address. Once per public IP address, your server sends it to the Opensolr API to learn its country and city. With the captcha on, Google receives the captcha answer and the visitor's IP address.
+- **Signed-in visitors.** Only an email signed with the chat's identity key counts as signed in; the key is derived from the chat's own secret and never leaves your server.
+- **Ratings and clicks** are accepted only from the same site, for an answer of the visitor's own conversation (a random token the browser received with the answer), and for a link that is in that answer. Each link is counted once per answer.
 
 ## Translating the admin
 

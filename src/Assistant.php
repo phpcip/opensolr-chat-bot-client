@@ -34,30 +34,58 @@ final class Assistant
         return self::MESSAGES[$code] ?? (in_array($code, self::LATE_CODES, true) ? self::LATE : self::FAILED);
     }
 
+    /** How an answer ended for the history: answered, late, limited or failed. */
+    public static function outcome(string $code): string
+    {
+        if ($code === '') {
+            return 'answered';
+        }
+        if (in_array($code, self::LATE_CODES, true)) {
+            return 'late';
+        }
+        return isset(self::MESSAGES[$code]) ? 'limited' : 'failed';
+    }
+
     /**
+     * The answer relayed as it arrives; the caller sends the end (done or the error message of the code).
+     *
      * @param list<array{role: string, content: string}> $messages
+     * @return array{text: string, code: string, searches: list<array{0: string, 1: string}>, first: ?float}
      */
-    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp): void
+    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp): array
     {
         $flow = new MarkdownFlow();
         $failure = null;
+        $text = '';
+        $first = null;
+        $searches = [];
+        $send = function (string $piece) use (&$text, &$first): bool {
+            if ($piece !== '') {
+                $text .= $piece;
+                $first ??= microtime(true);
+            }
+            return $this->out->text($piece);
+        };
         try {
             $this->api->stream('assistant_chat', [
                 'messages' => $messages,
                 'instructions' => $instructions,
                 'timezone' => $timezone,
                 'visitor_ip' => $visitorIp,
-            ], function (array $event) use ($flow, &$failure): bool {
+            ], function (array $event) use ($flow, &$failure, &$searches, $send): bool {
                 $type = is_string($event['type'] ?? null) ? $event['type'] : '';
                 if ($type === 'text') {
-                    return $this->out->text($flow->push(is_string($event['text'] ?? null) ? $event['text'] : ''));
+                    return $send($flow->push(is_string($event['text'] ?? null) ? $event['text'] : ''));
                 }
                 if ($type === 'status' || $type === 'tool') {
+                    if ($type === 'tool' && is_string($event['name'] ?? null)) {
+                        $searches[] = [$event['name'], Progress::subject($event)];
+                    }
                     $line = Progress::label($event);
                     if ($line === '') {
                         return true;
                     }
-                    return $this->out->text($flow->flush()) && $this->out->progress($line);
+                    return $send($flow->flush()) && $this->out->progress($line);
                 }
                 if ($type === 'error') {
                     $failure = is_scalar($event['msg'] ?? null) ? (string) $event['msg'] : 'ERROR';
@@ -68,15 +96,15 @@ final class Assistant
             if ($failure !== null) {
                 throw new \RuntimeException($failure);
             }
-            $this->out->text($flow->finish());
+            $send($flow->finish());
             if (!$flow->wrote()) {
                 throw new \RuntimeException('ERROR_NO_ANSWER');
             }
-            $this->out->done();
+            return ['text' => $text, 'code' => '', 'searches' => $searches, 'first' => $first];
         } catch (\RuntimeException $e) {
             error_log('Opensolr Chat Bot: the answer failed: ' . $e->getMessage());
-            $this->out->text($flow->finish());
-            $this->out->error(self::message($e->getMessage()));
+            $send($flow->finish());
+            return ['text' => $text, 'code' => $e->getMessage(), 'searches' => $searches, 'first' => $first];
         }
     }
 }

@@ -69,9 +69,22 @@ final class EventStream
         return $text === '' ? !$this->aborted() : $this->send(['type' => 'text', 'text' => $text]);
     }
 
-    public function done(): void
+    /**
+     * @param array{turn?: string, rate?: bool} $extra the token of the recorded answer, and whether it can be rated
+     */
+    public function done(array $extra = []): void
     {
-        $this->send(['type' => 'done'], true);
+        $this->send(['type' => 'done'] + $extra, true);
+    }
+
+    /**
+     * Ends the response for the visitor (PHP-FPM), so work done after the answer does not keep the browser waiting.
+     */
+    public function finish(): void
+    {
+        if ($this->ended && function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
     }
 
     public function error(string $message): void

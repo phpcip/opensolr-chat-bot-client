@@ -16,7 +16,7 @@ use Opensolr\ChatBot\Http\Response;
  */
 final class App
 {
-    private const ADMIN_ROUTES = ['/admin', '/admin/gate', '/admin/login', '/admin/logout', '/admin/test'];
+    private const ADMIN_ROUTES = ['/admin', '/admin/gate', '/admin/login', '/admin/logout', '/admin/test', '/admin/stats', '/admin/history', '/admin/delete'];
 
     private string $dataDir;
     private string $basePath;
@@ -89,6 +89,14 @@ final class App
                 return;
             }
             $public->captcha(new Captcha($this->settings(), $this->store(), $cookiePath));
+            return;
+        }
+        if ($route === '/feedback' || $route === '/click') {
+            if ($method !== 'POST') {
+                Response::json(405, ['error' => 'method_not_allowed'], ['Allow' => 'POST']);
+                return;
+            }
+            $public->report($route, new Journal($this->store(), $this->settings()->str('timezone')));
             return;
         }
         if ($route === '/chat') {

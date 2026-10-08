@@ -14,6 +14,9 @@
   const BASE_PATH = SRC.pathname.replace(/\/widget\.js$/, '');
   const BASE = SRC.origin + BASE_PATH;
   const KEY = 'opensolr-chat:' + BASE_PATH + ':';
+  // A signed-in visitor: the email and its signature, written by the site on this script tag
+  const IDENT = String(script.getAttribute('data-ident') || '').trim();
+  const IDENT_SIG = String(script.getAttribute('data-ident-sig') || '').trim();
   const STALL_MS = 45000;
   const TOTAL_MS = 180000;
   const REQUEST_MS = 20000;
@@ -37,7 +40,9 @@
     help: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', 'M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6', 'M12 17h.01'],
     send: ['M5 12h14', 'M13 6l6 6-6 6'],
     back: ['M15 6l-6 6 6 6'],
-    grip: ['M4 10V4h6', 'M4 4l7 7', 'M20 14v6h-6', 'M20 20l-7-7']
+    grip: ['M4 10V4h6', 'M4 4l7 7', 'M20 14v6h-6', 'M20 20l-7-7'],
+    good: ['M7 10v11', 'M15 5.9L14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9z'],
+    bad: ['M17 14V3', 'M9 18.1l1-4.1H4.2a2 2 0 0 1-1.9-2.6l2.3-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.8a2 2 0 0 0-1.8 1.1L12 22a3.1 3.1 0 0 1-3-3.9z']
   };
 
   const T = {
@@ -86,7 +91,9 @@
     capExpired: 'The check expired. Please tick the box again.',
     capLoad: 'The check could not be loaded. Check your connection, then try again.',
     capRetry: 'Try again',
-    capCancel: 'Cancel'
+    capCancel: 'Cancel',
+    rateGood: 'Good answer',
+    rateBad: 'Bad answer'
   };
 
   const CSS = [
@@ -124,6 +131,10 @@
     '.note{align-self:center;margin:0;color:#4a4540;font-size:14px;font-style:italic}',
     '.err{margin:0;color:#b42318}',
     '.md+.err{margin-top:.5em;padding-top:.5em;border-top:1px solid #e5e1da}',
+    '.rate{display:flex;gap:4px;margin:6px 0 0}',
+    '.rbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid #e5e1da;border-radius:2px;background:#ffffff;color:#6b645c}',
+    '.rbtn:hover,.rbtn:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent)}',
+    '.rbtn[aria-pressed="true"]{border-color:var(--osc-accent);background:var(--osc-accent);color:#ffffff}',
     '.progress{display:flex;align-items:center;gap:10px;min-height:22px;color:#4a4540;font-style:italic}',
     '.dot{flex:0 0 auto;width:8px;height:8px;border-radius:2px;background:var(--osc-accent);animation:osc-pulse 1s ease-in-out infinite}',
     '@keyframes osc-pulse{0%,100%{opacity:.25}50%{opacity:1}}',
@@ -578,6 +589,8 @@
         follow = false;
       }
     }, { passive: true });
+    ui.log.addEventListener('click', onLinkOpen);
+    ui.log.addEventListener('auxclick', onLinkOpen);
     body.appendChild(ui.log);
 
     ui.foot = el('div', 'foot');
@@ -774,7 +787,11 @@
       const messages = [];
       c.messages.forEach(function (m) {
         if (m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string') {
-          messages.push({ role: m.role, content: m.content, error: typeof m.error === 'string' ? m.error : '' });
+          const turn = typeof m.turn === 'string' && /^[a-f0-9]{32}$/.test(m.turn) ? m.turn : '';
+          messages.push({
+            role: m.role, content: m.content, error: typeof m.error === 'string' ? m.error : '',
+            turn: turn, rate: turn !== '' && m.rate === true, rating: m.rating === 1 || m.rating === -1 ? m.rating : 0
+          });
         }
       });
       return { id: c.id, messages: messages };
@@ -974,7 +991,9 @@
         }
       }
       else if (msg.content || msg.error) {
-        ui.log.appendChild(bubbleBot(msg.content, msg.error));
+        const box = bubbleBot(msg.content, msg.error);
+        mark(box, msg);
+        ui.log.appendChild(box);
       }
     });
   }
@@ -997,6 +1016,65 @@
       box.appendChild(el('p', 'err', error));
     }
     return box;
+  }
+
+  // The answer's token on its bubble (for the links opened in it), and the rating buttons when it can be rated
+  function mark(box, msg) {
+    if (!msg.turn) {
+      return;
+    }
+    box.setAttribute('data-turn', msg.turn);
+    if (!msg.rate) {
+      return;
+    }
+    const bar = el('div', 'rate');
+    const good = button('rbtn', T.rateGood);
+    const bad = button('rbtn', T.rateBad);
+    good.title = T.rateGood;
+    bad.title = T.rateBad;
+    good.appendChild(icon(ICON.good, 16));
+    bad.appendChild(icon(ICON.bad, 16));
+    function show() {
+      good.setAttribute('aria-pressed', msg.rating === 1 ? 'true' : 'false');
+      bad.setAttribute('aria-pressed', msg.rating === -1 ? 'true' : 'false');
+    }
+    function rate(value) {
+      msg.rating = msg.rating === value ? 0 : value;
+      show();
+      save();
+      report('/feedback', { turn: msg.turn, rating: msg.rating });
+    }
+    good.addEventListener('click', function () { rate(1); });
+    bad.addEventListener('click', function () { rate(-1); });
+    show();
+    bar.appendChild(good);
+    bar.appendChild(bad);
+    box.appendChild(bar);
+  }
+
+  // A rating or a link opened, sent without waiting for an answer (and still sent while the page unloads)
+  function report(path, data) {
+    const body = JSON.stringify(data);
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(BASE + path, new Blob([body], { type: 'application/json' }))) {
+        return;
+      }
+    }
+    catch (e) {
+      // the fetch below sends it
+    }
+    fetch(BASE + path, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: body }).catch(function () {});
+  }
+
+  function onLinkOpen(e) {
+    if (e.type === 'auxclick' && e.button !== 1) {
+      return;
+    }
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    const box = a ? a.closest('.msg.bot[data-turn]') : null;
+    if (box) {
+      report('/click', { turn: box.getAttribute('data-turn'), url: a.href });
+    }
   }
 
   function fill(node, text) {
@@ -1101,7 +1179,13 @@
     if (error) {
       a.box.appendChild(el('p', 'err', error));
     }
-    conv.messages.push({ role: 'assistant', content: a.text, error: error });
+    const msg = { role: 'assistant', content: a.text, error: error, turn: '', rate: false, rating: 0 };
+    if (!error && typeof ev.turn === 'string' && /^[a-f0-9]{32}$/.test(ev.turn)) {
+      msg.turn = ev.turn;
+      msg.rate = ev.rate === true;
+      mark(a.box, msg);
+    }
+    conv.messages.push(msg);
     save();
     ui.status.textContent = '';
     setBusy(false);
@@ -1181,7 +1265,10 @@
           credentials: 'same-origin',
           cache: 'no-store',
           headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-          body: JSON.stringify({ conversation: conv.id, messages: history() }),
+          body: JSON.stringify(Object.assign(
+            { conversation: conv.id, messages: history(), page: window.location.origin + window.location.pathname },
+            IDENT && IDENT_SIG ? { ident: IDENT, sig: IDENT_SIG } : {}
+          )),
           signal: ctrl.signal
         });
         reached = true;

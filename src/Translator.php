@@ -12,7 +12,7 @@ use Opensolr\ChatBot\Http\EventStream;
 final class Translator
 {
     public const TIMEOUT = 300;
-    private const FAILED = 'Sorry, I could not translate that right now. Please try again in a moment.';
+    public const FAILED = 'Sorry, I could not translate that right now. Please try again in a moment.';
 
     public function __construct(
         private readonly OpensolrApi $api,
@@ -22,9 +22,12 @@ final class Translator
     }
 
     /**
+     * The translation relayed as it is written; the caller sends the end (done, or FAILED when the code is set).
+     *
      * @param array{from: ?string, to: string, text: string} $translation
+     * @return array{text: string, code: string, first: ?float}
      */
-    public function translate(array $translation): void
+    public function translate(array $translation): array
     {
         $languages = Languages::all();
         $name = static fn (string $code): string => $languages[$code][0] . ' (' . $code . ')';
@@ -44,27 +47,36 @@ final class Translator
         }
         $flow = new MarkdownFlow();
         $failure = null;
+        $text = '';
+        $first = null;
+        $send = function (string $piece) use (&$text, &$first): bool {
+            if ($piece !== '') {
+                $text .= $piece;
+                $first ??= microtime(true);
+            }
+            return $this->out->text($piece);
+        };
         try {
-            $this->api->stream('chat_completions', $body, function (array $chunk) use ($flow, &$failure): bool {
+            $this->api->stream('chat_completions', $body, function (array $chunk) use ($flow, &$failure, $send): bool {
                 if (isset($chunk['error'])) {
                     $failure = is_scalar($chunk['error']) ? (string) $chunk['error'] : 'ERROR';
                     return false;
                 }
                 $piece = $chunk['choices'][0]['delta']['content'] ?? '';
-                return !is_string($piece) || $piece === '' || $this->out->text($flow->push($piece));
+                return !is_string($piece) || $piece === '' || $send($flow->push($piece));
             }, self::TIMEOUT);
             if ($failure !== null) {
                 throw new \RuntimeException($failure);
             }
-            $this->out->text($flow->finish());
+            $send($flow->finish());
             if (!$flow->wrote()) {
                 throw new \RuntimeException('ERROR_NO_ANSWER');
             }
-            $this->out->done();
+            return ['text' => $text, 'code' => '', 'first' => $first];
         } catch (\RuntimeException $e) {
             error_log('Opensolr Chat Bot: the translation failed: ' . $e->getMessage());
-            $this->out->text($flow->finish());
-            $this->out->error(self::FAILED);
+            $send($flow->finish());
+            return ['text' => $text, 'code' => $e->getMessage(), 'first' => $first];
         }
     }
 

@@ -46,6 +46,34 @@ final class Progress
         return $label === null ? '' : $label . '…';
     }
 
+    /**
+     * What a tool call of the assistant looked for (its words, place, document or codes), for the history; '' when
+     * it names nothing.
+     *
+     * @param array<mixed> $event
+     */
+    public static function subject(array $event): string
+    {
+        $args = is_array($event['args'] ?? null) ? $event['args'] : [];
+        $arg = static function (string $key) use ($args): string {
+            $value = $args[$key] ?? '';
+            return is_scalar($value) ? trim((string) $value) : '';
+        };
+        return match (is_string($event['name'] ?? null) ? $event['name'] : '') {
+            'opensolr_site_search', 'opensolr_lexical_search', 'opensolr_latest_search' => $arg('query'),
+            'opensolr_read_document' => $arg('document_url'),
+            'opensolr_describe_image' => $arg('image_url'),
+            'opensolr_find_place', 'opensolr_local_time' => trim($arg('places') . ' ' . $arg('coordinates')),
+            'opensolr_postal_codes' => $arg('query') !== '' ? $arg('query') : trim($arg('city') . ' ' . $arg('country')),
+            'opensolr_currency_rates' => trim($arg('base') . ' ' . $arg('to')),
+            'opensolr_vat_rates' => $arg('countries'),
+            'opensolr_vat_check' => $arg('vat_numbers'),
+            'opensolr_distance' => trim($arg('from') . ' > ' . $arg('to'), ' >'),
+            'opensolr_ip_location' => $arg('ips'),
+            default => '',
+        };
+    }
+
     private static function basename(mixed $url): string
     {
         $path = is_string($url) ? parse_url($url, PHP_URL_PATH) : null;

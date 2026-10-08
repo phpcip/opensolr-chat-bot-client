@@ -55,6 +55,11 @@ pre{margin:8px 0 0;padding:12px 14px;border:1px solid #cbd5e1;border-radius:2px;
 .logo-now img{max-height:40px;max-width:160px;border:1px solid #e2e8f0;border-radius:2px;background:#ffffff;padding:4px}
 .check{display:flex;align-items:center;gap:8px;margin:0;font-weight:400}
 .savebar{position:sticky;bottom:0;padding:14px 0;background:#f8fafc;border-top:1px solid #e2e8f0}
+main.wide{max-width:1240px}
+.tab-a{margin:0 0 -1px;padding:11px 16px;font-size:15px;font-weight:600;color:#475569;text-decoration:none;border:1px solid #f8fafc;border-bottom:2px solid #f8fafc;border-radius:2px 2px 0 0;white-space:nowrap}
+.tab-a:hover{color:#0f172a;background:#ffffff}
+.tab-a.on{color:#c05520;background:#ffffff;border-color:#e2e8f0;border-bottom-color:#c05520}
+@media (max-width:640px){.tab-a{flex:1 1 auto;text-align:center;padding:10px 10px}}
 @media (max-width:640px){.tabs label{flex:1 1 auto;text-align:center;padding:10px 10px}}
 CSS;
 
@@ -68,11 +73,65 @@ CSS;
         return self::e(I18n::t($text, $vars));
     }
 
-    private static function page(string $title, string $body, string $css = ''): string
+    public static function page(string $title, string $body, string $css = '', bool $wide = false): string
     {
         return '<!doctype html><html lang="' . self::e(I18n::lang()) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<meta name="robots" content="noindex, nofollow"><title>' . self::e($title) . '</title><style>' . self::CSS . $css . '</style></head>'
-            . '<body><main>' . $body . '</main></body></html>';
+            . '<body><main' . ($wide ? ' class="wide"' : '') . '>' . $body . '</main></body></html>';
+    }
+
+    /** The names of the settings tabs, in the admin's language. */
+    public static function tabNames(): array
+    {
+        return [
+            'account' => I18n::t('Account'),
+            'assistant' => I18n::t('Assistant'),
+            'window' => I18n::t('Chat window'),
+            'limits' => I18n::t('Limits'),
+            'captcha' => I18n::t('Captcha'),
+            'language' => I18n::t('Language'),
+            'install' => I18n::t('Add to your pages'),
+        ];
+    }
+
+    /** The brand, the sign-out button and the messages at the top of every admin page. */
+    public static function top(string $prefix, string $csrf, string $notice, array $errors): string
+    {
+        $body = '<div class="top"><div class="brand"><h1>Opensolr Chat Bot</h1><span>' . self::t('The chatbot of this site: it answers from your Opensolr Index, through the Opensolr API.') . '</span></div>'
+            . '<form method="post" action="' . self::e($prefix . '/admin/logout') . '">'
+            . '<input type="hidden" name="csrf" value="' . self::e($csrf) . '">'
+            . '<button type="submit" class="plain">' . self::t('Sign out') . '</button></form></div>';
+        if ($notice !== '') {
+            $body .= '<div class="box ok" role="status">' . self::e($notice) . '</div>';
+        }
+        if ($errors) {
+            $body .= '<div class="box bad" role="alert"><ul>';
+            foreach ($errors as $error) {
+                $body .= '<li>' . self::e($error) . '</li>';
+            }
+            $body .= '</ul></div>';
+        }
+        return $body;
+    }
+
+    /** The links to the stats and the history, before the settings tabs. */
+    public static function insightLinks(string $prefix, string $active): string
+    {
+        $out = '';
+        foreach (['stats' => I18n::t('Stats'), 'history' => I18n::t('History')] as $route => $name) {
+            $out .= '<a class="tab-a' . ($route === $active ? ' on' : '') . '" href="' . self::e($prefix . '/admin/' . $route) . '"' . ($route === $active ? ' aria-current="page"' : '') . '>' . self::e($name) . '</a>';
+        }
+        return $out;
+    }
+
+    /** The whole tab bar of the stats and the history pages: the settings tabs are links there. */
+    public static function nav(string $prefix, string $active): string
+    {
+        $out = '<nav class="tabs">' . self::insightLinks($prefix, $active);
+        foreach (self::tabNames() as $tab => $name) {
+            $out .= '<a class="tab-a" href="' . self::e($prefix . '/admin?tab=' . $tab) . '">' . self::e($name) . '</a>';
+        }
+        return $out . '</nav>';
     }
 
     private static function recaptcha(): string
@@ -120,7 +179,8 @@ CSS;
      * @param array{
      *     prefix: string, csrf: string, values: array<string, string|int>, api_key_mask: string,
      *     captcha_secret_mask: string, indexes: list<array{index_name: string, index_type: string}>,
-     *     errors: list<string>, notice: string, snippet: string, tab: string, logo_url: string
+     *     errors: list<string>, notice: string, snippet: string, snippet_ident: string, snippet_php: string,
+     *     ident_key: string, tab: string, logo_url: string
      * } $p
      */
     public static function settings(array $p): string
@@ -128,15 +188,7 @@ CSS;
         $v = $p['values'];
         $field = static fn (string $name): string => self::e((string) ($v[$name] ?? ''));
         $tab = in_array($p['tab'], self::TABS, true) ? $p['tab'] : 'account';
-        $names = [
-            'account' => I18n::t('Account'),
-            'assistant' => I18n::t('Assistant'),
-            'window' => I18n::t('Chat window'),
-            'limits' => I18n::t('Limits'),
-            'captcha' => I18n::t('Captcha'),
-            'language' => I18n::t('Language'),
-            'install' => I18n::t('Add to your pages'),
-        ];
+        $names = self::tabNames();
 
         $css = '';
         foreach (self::TABS as $t) {
@@ -146,27 +198,14 @@ CSS;
         }
         $css .= '#tab-install:checked~.savebar{display:none}';
 
-        $body = '<div class="top"><div class="brand"><h1>Opensolr Chat Bot</h1><span>' . self::t('The chatbot of this site: it answers from your Opensolr Index, through the Opensolr API.') . '</span></div>'
-            . '<form method="post" action="' . self::e($p['prefix'] . '/admin/logout') . '">'
-            . '<input type="hidden" name="csrf" value="' . self::e($p['csrf']) . '">'
-            . '<button type="submit" class="plain">' . self::t('Sign out') . '</button></form></div>';
-        if ($p['notice'] !== '') {
-            $body .= '<div class="box ok" role="status">' . self::e($p['notice']) . '</div>';
-        }
-        if ($p['errors']) {
-            $body .= '<div class="box bad" role="alert"><ul>';
-            foreach ($p['errors'] as $error) {
-                $body .= '<li>' . self::e($error) . '</li>';
-            }
-            $body .= '</ul></div>';
-        }
+        $body = self::top($p['prefix'], $p['csrf'], $p['notice'], $p['errors']);
 
         $body .= '<form method="post" action="' . self::e($p['prefix'] . '/admin') . '" enctype="multipart/form-data">'
             . '<input type="hidden" name="csrf" value="' . self::e($p['csrf']) . '">';
         foreach (self::TABS as $t) {
             $body .= '<input type="radio" class="tab-r" name="tab" id="tab-' . $t . '" value="' . $t . '"' . ($t === $tab ? ' checked' : '') . '>';
         }
-        $body .= '<div class="tabs">';
+        $body .= '<div class="tabs">' . self::insightLinks($p['prefix'], '');
         foreach (self::TABS as $t) {
             $body .= '<label for="tab-' . $t . '">' . self::e($names[$t]) . '</label>';
         }
@@ -272,7 +311,14 @@ CSS;
         // Add to your pages
         $body .= '<section class="pane pane-install"><div class="card">'
             . '<p class="lead">' . self::t('Paste this before </body> on every page that shows the chat:') . '</p>'
-            . '<pre>' . self::e($p['snippet']) . '</pre></div></section>';
+            . '<pre>' . self::e($p['snippet']) . '</pre>'
+            . '<h3>' . self::t('Signed-in visitors') . '</h3>'
+            . '<p>' . self::t('On the pages of a visitor who is signed in to your site, add the email and its signature to the same tag. The stats and the history then show who asked; without a valid signature the visitor is anonymous, so nobody can pass for somebody else.') . '</p>'
+            . '<pre>' . self::e($p['snippet_ident']) . '</pre>'
+            . '<p class="hint">' . self::t('From PHP, the package writes both attributes (empty for a visitor who is not signed in):') . '</p>'
+            . '<pre>' . self::e($p['snippet_php']) . '</pre>'
+            . '<p class="hint">' . self::t('From another language: the signature is HMAC-SHA256 of the email in lower case, with this identity key, written in hex. Keep the key on your server, never in a page.') . '</p>'
+            . '<pre>' . self::e($p['ident_key']) . '</pre></div></section>';
 
         $body .= '</div><div class="actions savebar"><button type="submit">' . self::t('Save settings') . '</button></div></form>'
             . '<script src="' . self::e($p['prefix'] . '/admin.js') . '" defer></script>';

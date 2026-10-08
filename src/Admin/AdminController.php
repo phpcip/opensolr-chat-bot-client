@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Opensolr\ChatBot\Admin;
 
 use Opensolr\ChatBot\Captcha;
+use Opensolr\ChatBot\History;
 use Opensolr\ChatBot\I18n;
+use Opensolr\ChatBot\Identity;
 use Opensolr\ChatBot\Logo;
 use Opensolr\ChatBot\Http\Request;
 use Opensolr\ChatBot\Http\Response;
 use Opensolr\ChatBot\OpensolrApi;
 use Opensolr\ChatBot\Settings;
+use Opensolr\ChatBot\Stats;
 use Opensolr\ChatBot\Store;
 
 /**
@@ -56,7 +59,7 @@ final class AdminController
             Response::html(503, AdminView::noPassword(), self::HEADERS);
             return;
         }
-        $this->store->purgeIfDue($this->settings->int('window_seconds'));
+        $this->store->purgeIfDue($this->settings->int('window_seconds'), $this->settings->str('timezone'));
         $post = $this->request->method() === 'POST';
         if ($post && !$this->request->sameOrigin()) {
             Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), I18n::t('This form was not sent from this site.'), $this->captchaKey()), self::LOGIN_HEADERS);
@@ -98,6 +101,20 @@ final class AdminController
         }
         if ($route === '/admin/test') {
             $post ? $this->test() : Response::redirect($this->url('/admin'), self::HEADERS);
+            return;
+        }
+        if ($route === '/admin/stats' || $route === '/admin/history') {
+            if ($post) {
+                Response::redirect($this->url($route), self::HEADERS);
+            } elseif ($route === '/admin/stats') {
+                $this->stats();
+            } else {
+                $this->history();
+            }
+            return;
+        }
+        if ($route === '/admin/delete') {
+            $post ? $this->delete() : Response::redirect($this->url('/admin/history'), self::HEADERS);
             return;
         }
         $post ? $this->save() : $this->render([], $this->session->takeFlash(), null);
@@ -328,9 +345,67 @@ final class AdminController
             'errors' => $errors,
             'notice' => $notice,
             'snippet' => '<script src="' . $this->prefix . '/widget.js" defer></script>',
+            'snippet_ident' => '<script src="' . $this->prefix . '/widget.js" data-ident="visitor@example.com" data-ident-sig="<signature>" defer></script>',
+            'snippet_php' => '<script src="' . $this->prefix . '/widget.js"<?= \\Opensolr\\ChatBot\\Identity::attributes(' . var_export($this->store->dir(), true) . ', $email) ?> defer></script>',
+            'ident_key' => Identity::key($this->store),
             'tab' => $this->tab(),
             'logo_url' => (new Logo($this->store))->url($this->prefix),
         ]), self::HEADERS);
+    }
+
+    private function stats(): void
+    {
+        $days = (int) $this->request->query('days', 3);
+        Response::html(200, InsightsView::stats([
+            'prefix' => $this->prefix,
+            'csrf' => $this->session->csrf(),
+            'notice' => $this->session->takeFlash(),
+            'timezone' => $this->settings->str('timezone'),
+            'search' => $this->store->canSearch(),
+            'site' => $this->request->host(),
+            'stats' => (new Stats($this->store, $this->settings->str('timezone')))->period($days),
+        ]), self::HEADERS);
+    }
+
+    private function history(): void
+    {
+        $filters = History::filters(fn (string $name, int $max): string => $this->request->query($name, $max));
+        $history = new History($this->store);
+        $since = (new Stats($this->store, $this->settings->str('timezone')))->range($filters['days'])[2];
+        [$rows, $next] = $history->page($filters, $since, $this->request->query('after', 40));
+        $chat = ctype_digit($this->request->query('c', 19)) ? $history->conversation((int) $this->request->query('c', 19)) : null;
+        $confirm = $this->request->query('confirm', 10);
+        Response::html(200, InsightsView::history([
+            'prefix' => $this->prefix,
+            'csrf' => $this->session->csrf(),
+            'notice' => $this->session->takeFlash(),
+            'timezone' => $this->settings->str('timezone'),
+            'search' => $this->store->canSearch(),
+            'filters' => $filters,
+            'after' => $this->request->query('after', 40),
+            'rows' => $rows,
+            'next' => $next,
+            'countries' => $history->countries(),
+            'chat' => $chat,
+            'confirm' => in_array($confirm, ['chat', 'email', 'ip'], true) ? $confirm : '',
+        ]), self::HEADERS);
+    }
+
+    /** Deletes a conversation, or everything of an email or an IP address, then back to the history. */
+    private function delete(): void
+    {
+        $what = $this->request->post('what', 10);
+        $deleted = (new History($this->store))->delete($what, $this->request->post('value', 254));
+        $this->session->setFlash($deleted === 1 ? I18n::t('Deleted: 1 conversation.') : I18n::t('Deleted: {count} conversations.', ['count' => number_format($deleted)]));
+        // Back to the same list, without the conversation that is gone
+        parse_str($this->request->post('back', 2000), $back);
+        $keep = [];
+        foreach (['days', 'who', 'email', 'country', 'ip', 'page', 'flag', 'q', 'link'] as $key) {
+            if (isset($back[$key]) && is_string($back[$key]) && $back[$key] !== '' && !($what === $key && $back[$key] === $this->request->post('value', 254))) {
+                $keep[$key] = $back[$key];
+            }
+        }
+        Response::redirect($this->url('/admin/history') . ($keep ? '?' . http_build_query($keep) : ''), self::HEADERS);
     }
 
     /** The tab the admin was on: the one posted, else the one in the address, else the first. */

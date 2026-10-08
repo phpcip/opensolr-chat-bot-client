@@ -13,6 +13,7 @@ use Opensolr\ChatBot\Http\Response;
 final class PublicRoutes
 {
     private const CAPTCHA_BODY_MAX = 16384;
+    private const REPORT_BODY_MAX = 8192;
 
     public function __construct(private readonly Request $request)
     {
@@ -65,6 +66,27 @@ final class PublicRoutes
             'commands' => $commands,
             'languages' => Languages::all(),
         ]);
+    }
+
+    /**
+     * POST /feedback {turn, rating} and POST /click {turn, url}: the visitor's rating of an answer and a link of an
+     * answer opened. Answered 204 whatever happened: nothing for a page to learn.
+     */
+    public function report(string $route, Journal $journal): void
+    {
+        $body = $this->request->isJson() && $this->request->sameOrigin() ? $this->request->body(self::REPORT_BODY_MAX) : null;
+        $data = $body !== null ? json_decode($body, true, 4) : null;
+        $turn = is_array($data) && is_string($data['turn'] ?? null) ? $data['turn'] : '';
+        try {
+            if ($route === '/feedback' && is_int($data['rating'] ?? null)) {
+                $journal->rate($turn, $data['rating']);
+            } elseif ($route === '/click' && is_string($data['url'] ?? null)) {
+                $journal->click($turn, $data['url']);
+            }
+        } catch (\Throwable $e) {
+            error_log('Opensolr Chat Bot: a ' . ltrim($route, '/') . ' could not be kept: ' . $e->getMessage());
+        }
+        Response::send(204, '', ['Cache-Control' => 'no-store'], false);
     }
 
     public function captcha(Captcha $captcha): void

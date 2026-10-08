@@ -101,6 +101,19 @@ final class Commands
     }
 
     /**
+     * The command a message starts with, aliases resolved; '' when it names no command.
+     */
+    public static function name(string $message): string
+    {
+        if (!preg_match('/^\/([a-z?]+)/isu', trim($message), $m)) {
+            return '';
+        }
+        $name = strtolower($m[1]);
+        $name = self::ALIASES[$name] ?? $name;
+        return isset(self::definitions(0)[$name]) ? $name : '';
+    }
+
+    /**
      * The answer to a message starting with "/", in Markdown.
      */
     public function run(string $message): string
