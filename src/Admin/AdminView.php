@@ -18,12 +18,12 @@ final class AdminView
     private const CSS = <<<'CSS'
 :root{color-scheme:light}
 body{margin:0;background:#f8fafc;color:#1e293b;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-main{max-width:920px;margin:0 auto;padding:40px 16px 80px}
+main{max-width:1240px;margin:0 auto;padding:40px 16px 80px}
 h1{font-size:26px;margin:0}
 h3{font-size:16px;margin:28px 0 0;color:#0f172a}
 p{margin:8px 0}
 label{display:block;font-weight:600;margin:18px 0 6px}
-input[type=text],input[type=email],input[type=password],input[type=number],input[type=file],select,textarea{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:2px;background:#ffffff;color:#1e293b;font:inherit}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=search],input[type=file],select,textarea{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:2px;background:#ffffff;color:#1e293b;font:inherit}
 input:focus,select:focus,textarea:focus{outline:2px solid #c05520;outline-offset:0;border-color:#c05520}
 textarea{min-height:140px;resize:vertical}
 .hint{margin:6px 0 0;color:#475569;font-size:14px}
@@ -55,7 +55,6 @@ pre{margin:8px 0 0;padding:12px 14px;border:1px solid #cbd5e1;border-radius:2px;
 .logo-now img{max-height:40px;max-width:160px;border:1px solid #e2e8f0;border-radius:2px;background:#ffffff;padding:4px}
 .check{display:flex;align-items:center;gap:8px;margin:0;font-weight:400}
 .savebar{position:sticky;bottom:0;padding:14px 0;background:#f8fafc;border-top:1px solid #e2e8f0}
-main.wide{max-width:1240px}
 .tab-a{margin:0 0 -1px;padding:11px 16px;font-size:15px;font-weight:600;color:#475569;text-decoration:none;border:1px solid #f8fafc;border-bottom:2px solid #f8fafc;border-radius:2px 2px 0 0;white-space:nowrap}
 .tab-a:hover{color:#0f172a;background:#ffffff}
 .tab-a.on{color:#c05520;background:#ffffff;border-color:#e2e8f0;border-bottom-color:#c05520}
@@ -73,11 +72,11 @@ CSS;
         return self::e(I18n::t($text, $vars));
     }
 
-    public static function page(string $title, string $body, string $css = '', bool $wide = false): string
+    public static function page(string $title, string $body, string $css = ''): string
     {
         return '<!doctype html><html lang="' . self::e(I18n::lang()) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<meta name="robots" content="noindex, nofollow"><title>' . self::e($title) . '</title><style>' . self::CSS . $css . '</style></head>'
-            . '<body><main' . ($wide ? ' class="wide"' : '') . '>' . $body . '</main></body></html>';
+            . '<body><main>' . $body . '</main></body></html>';
     }
 
     /** The names of the settings tabs, in the admin's language. */

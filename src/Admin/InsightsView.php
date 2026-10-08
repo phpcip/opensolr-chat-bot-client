@@ -277,7 +277,7 @@ CSS;
             . self::topPanel(I18n::t('Languages of the browsers'), I18n::t('Of the conversations started.'), $top['lang'], static fn (string $v): array => [self::e(Languages::all()[$v][0] ?? $v), null])
             . '</div>';
 
-        return AdminView::page(I18n::t('Stats') . ' · Opensolr Chat Bot', $body . self::script($prefix), self::CSS, true);
+        return AdminView::page(I18n::t('Stats') . ' · Opensolr Chat Bot', $body . self::script($prefix), self::CSS);
     }
 
     /**
@@ -473,7 +473,7 @@ CSS;
         if ($p['chat'] !== null) {
             $body .= self::conversation($p, $kept);
         }
-        return AdminView::page(I18n::t('History') . ' · Opensolr Chat Bot', $body . self::script($prefix), self::CSS, true);
+        return AdminView::page(I18n::t('History') . ' · Opensolr Chat Bot', $body . self::script($prefix), self::CSS);
     }
 
     /**
