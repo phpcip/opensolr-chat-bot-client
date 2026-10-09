@@ -65,12 +65,12 @@ final class AdminController
             Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), I18n::t('This form was not sent from this site.'), $this->captchaKey()), self::LOGIN_HEADERS);
             return;
         }
-        // A captcha before any admin page loads, when the captcha is set up
+        // A captcha before any admin page loads, when the captcha is set up and the admin is not signed in
         if ($route === '/admin/gate' && $post) {
             $this->passGate();
             return;
         }
-        if ($this->captchaKey() !== '' && !$this->gateValid()) {
+        if ($this->captchaKey() !== '' && !$this->gateValid() && !$this->session->isValid()) {
             Response::html(200, AdminView::gate($this->url('/admin/gate'), $this->captchaKey(), ''), self::LOGIN_HEADERS);
             return;
         }

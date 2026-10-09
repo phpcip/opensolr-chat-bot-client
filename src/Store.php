@@ -11,7 +11,8 @@ final class Store
     private const PURGE_BATCH = 2000;
     private const PURGE_BATCHES = 25;
     public const CONVERSATION_SECONDS = 86400;
-    public const ADMIN_IDLE_SECONDS = 7200;
+    // Browsers keep a cookie at most 400 days; the admin cookie is renewed on use, so only a session unused that long is gone
+    public const ADMIN_SESSION_SECONDS = 400 * 86400;
     public const LOGIN_FAILURE_SECONDS = 900;
     public const HISTORY_DAYS = 30;
 
@@ -299,7 +300,7 @@ final class Store
             'DELETE FROM conversations WHERE rowid IN (SELECT rowid FROM conversations WHERE updated < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::CONVERSATION_SECONDS,
             'DELETE FROM locks WHERE rowid IN (SELECT rowid FROM locks WHERE expires < ? LIMIT ' . self::PURGE_BATCH . ')' => $now,
             'DELETE FROM login_failures WHERE id IN (SELECT id FROM login_failures WHERE ts < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::LOGIN_FAILURE_SECONDS,
-            'DELETE FROM admin_sessions WHERE rowid IN (SELECT rowid FROM admin_sessions WHERE seen < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::ADMIN_IDLE_SECONDS,
+            'DELETE FROM admin_sessions WHERE rowid IN (SELECT rowid FROM admin_sessions WHERE seen < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::ADMIN_SESSION_SECONDS,
             'DELETE FROM turns WHERE id IN (SELECT id FROM turns WHERE ts < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::HISTORY_DAYS * 86400,
             'DELETE FROM chats WHERE id IN (SELECT id FROM chats WHERE updated < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::HISTORY_DAYS * 86400,
             'DELETE FROM geo WHERE ip IN (SELECT ip FROM geo WHERE ts < ? LIMIT ' . self::PURGE_BATCH . ')' => $now - self::HISTORY_DAYS * 86400,

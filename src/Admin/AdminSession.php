@@ -46,12 +46,13 @@ final class AdminSession
         $stmt = $this->store->pdo()->prepare('SELECT k, csrf, flash, seen FROM admin_sessions WHERE k = ?');
         $stmt->execute([self::hash($id)]);
         $row = $stmt->fetch();
-        $now = time();
-        if (!is_array($row) || (int) $row['seen'] < $now - Store::ADMIN_IDLE_SECONDS) {
+        if (!is_array($row)) {
             return false;
         }
+        $now = time();
         if ((int) $row['seen'] < $now - 60) {
             $this->store->pdo()->prepare('UPDATE admin_sessions SET seen = ? WHERE k = ?')->execute([$now, $row['k']]);
+            $this->sendCookie($id, $now);
         }
         $this->row = ['k' => (string) $row['k'], 'csrf' => (string) $row['csrf'], 'flash' => (string) $row['flash'], 'seen' => $now];
         return true;
@@ -67,7 +68,13 @@ final class AdminSession
         $row = ['k' => self::hash($id), 'csrf' => bin2hex(random_bytes(32)), 'flash' => '', 'seen' => time()];
         $this->store->pdo()->prepare('INSERT INTO admin_sessions (k, csrf, flash, seen) VALUES (?, ?, ?, ?)')->execute([$row['k'], $row['csrf'], '', $row['seen']]);
         $this->row = $row;
-        Response::cookie(self::COOKIE, $id, 0, $this->cookiePath, $this->request->isHttps(), 'Strict');
+        $this->sendCookie($id, $row['seen']);
+    }
+
+    /** The session lasts until Sign out: the cookie is renewed on use, for as long as browsers keep one. */
+    private function sendCookie(string $id, int $now): void
+    {
+        Response::cookie(self::COOKIE, $id, $now + Store::ADMIN_SESSION_SECONDS, $this->cookiePath, $this->request->isHttps(), 'Strict');
     }
 
     public function destroy(): void

@@ -177,9 +177,9 @@ If something does not work, your PHP error log has a line starting with `Opensol
 ### Opening it
 
 1. Until the admin password is set, the admin does not open: it shows the command of step 4.
-2. Once both reCAPTCHA keys are saved (Captcha tab), a captcha page comes before any admin page. A solved captcha is valid for "Hours a solved captcha is valid", for that IP address and browser. The sign-in form then also has a captcha.
+2. Once both reCAPTCHA keys are saved (Captcha tab), a captcha page comes before any admin page while you are signed out. A solved captcha is valid for "Hours a solved captcha is valid", for that IP address and browser. The sign-in form then also has a captcha.
 3. Sign in with the password. Five failed sign-ins from one IP address in 15 minutes block sign-ins from that address for up to 15 minutes.
-4. The session ends with Sign out, when the browser is closed, or after 2 hours without activity.
+4. The session ends only with Sign out. Closing the browser or leaving the admin unused does not end it: its cookie is renewed at every visit, and browsers keep a cookie up to 400 days.
 
 Stats and History are pages of their own, described after the settings. The other tabs are one form: Save settings saves every tab at once. Each tab and its settings follow.
 
@@ -245,7 +245,7 @@ What each limit does is in [Captcha and limits](#captcha-and-limits).
 | Hours a solved captcha is valid | 240 | 1 to 8,760 (a year) |
 
 - The keys are Google reCAPTCHA v2 keys of the checkbox type, created for your site's domain.
-- With both keys saved, visitors solve the captcha before their first question, and the admin asks for it before any page.
+- With both keys saved, visitors solve the captcha before their first question, and the admin asks for it before any page while you are signed out.
 - To turn the captcha off, empty the Site key and save.
 
 ### Language
@@ -499,8 +499,8 @@ composer update opensolr/chat-bot-client
 
 - **Credentials only on your server.** The Opensolr email and API key and the reCAPTCHA secret key are kept in the SQLite database of the data folder and used only by your server. They never reach the browser, and the admin never shows the API key or the secret key again once saved.
 - **Data folder outside the web root.** Nothing in it can be downloaded. If the chat creates the folder itself, it creates it readable only by the PHP user.
-- **Admin behind captcha, password and throttling.** A reCAPTCHA page before any admin page (once the keys are saved), a captcha on the sign-in form, a password of at least 12 characters stored as an Argon2id hash (bcrypt where Argon2id is not available), and at most 5 failed sign-ins per IP address in 15 minutes.
-- **Admin sessions.** The session cookie is `HttpOnly`, `SameSite=Strict` and `Secure` over HTTPS. A new session starts at every sign-in, it ends after 2 hours without activity, and setting the password signs out every session.
+- **Admin behind captcha, password and throttling.** A reCAPTCHA page before any admin page while signed out (once the keys are saved), a captcha on the sign-in form, a password of at least 12 characters stored as an Argon2id hash (bcrypt where Argon2id is not available), and at most 5 failed sign-ins per IP address in 15 minutes.
+- **Admin sessions.** The session cookie is `HttpOnly`, `SameSite=Strict` and `Secure` over HTTPS. A new session starts at every sign-in and lasts until Sign out (the cookie is renewed at every visit, browsers keep it up to 400 days); setting the password signs out every session.
 - **CSRF.** Every form of the signed-in admin carries a token tied to the session; the sign-in form carries a token tied to the browser.
 - **Same-origin check.** Every form of the admin, the captcha check and every chat question must come from a page of the same host name (their `Origin` or `Referer`), or they are refused.
 - **No secrets in `/config`.** The widget's public configuration holds only what the widget shows: the title, the button text, the logo address, the accent colour, the greeting, the placeholder, the message and conversation limits, whether the captcha is on and its site key, the commands and the language codes.
