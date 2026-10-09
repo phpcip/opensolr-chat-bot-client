@@ -239,5 +239,10 @@
     "Pages made in another language:": "ほかの言語で作るページ：",
     "make the signature with the identity key, for example:": "ID キーで署名を作ります。例：",
     "To check your code: for visitor@example.com it must give": "コードの確認：visitor@example.com では次の値になるはずです",
-    "Every language, step by step:": "各言語の手順："
+    "Every language, step by step:": "各言語の手順：",
+    "Delete selected": "選択した会話を削除",
+    "Select all": "すべて選択",
+    "Select this conversation": "この会話を選択",
+    "Delete {count} conversations, with all their messages?": "{count} 件の会話を、すべてのメッセージとともに削除しますか？",
+    "Check the conversations to delete first.": "先に削除する会話にチェックを入れてください。"
 }

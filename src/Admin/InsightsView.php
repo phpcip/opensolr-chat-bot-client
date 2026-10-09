@@ -92,6 +92,13 @@ ol.top .w span{display:block;height:4px;background:#c05520;border-radius:2px}
 .dlg-actions a{padding:6px 12px;border:1px solid #f3b4ad;border-radius:2px;color:#b42318;font-size:14px;font-weight:600;text-decoration:none}
 .confirm{margin:14px 0 0;padding:12px 14px;border:1px solid #dc2626;border-radius:2px;color:#7f1d1d}
 .confirm button{border-color:#b42318;background:#b42318}
+.pickbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 10px}
+button.danger{border-color:#b42318;background:#ffffff;color:#b42318}
+button.danger:hover{background:#fef3f2;border-color:#b42318}
+button.danger:disabled{border-color:#cbd5e1;background:#ffffff;color:#94a3b8;cursor:default}
+.pick-confirm{margin:0 0 14px}
+table.list th.pick,table.list td.pick{width:1%;padding-right:2px}
+table.list td.pick input,table.list th.pick input{width:18px;height:18px;margin:2px 0 0;accent-color:#c05520;cursor:pointer}
 .turn{margin:18px 0 0;padding:14px 0 0;border-top:1px solid #e2e8f0}
 .t-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;color:#475569;font-size:14px}
 .q{margin:8px 0 0;padding:9px 12px;border:1px solid #ddd5ca;border-radius:2px;background:#efe9e2;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -392,7 +399,7 @@ CSS;
      *     prefix: string, csrf: string, notice: string, timezone: string, search: bool,
      *     filters: array{days: int, who: string, email: string, country: string, ip: string, page: string, flag: string, q: string, link: string},
      *     after: string, rows: list<array<string, mixed>>, next: string, countries: list<array{country: string, name: string}>,
-     *     chat: array{chat: array<string, mixed>, turns: list<array<string, mixed>>}|null, confirm: string
+     *     chat: array{chat: array<string, mixed>, turns: list<array<string, mixed>>}|null, confirm: string, selected: list<int>
      * } $p
      */
     public static function history(array $p): string
@@ -444,18 +451,37 @@ CSS;
             $body .= '<div class="chips">' . $chips . '</div>';
         }
 
-        // The conversations
+        // The conversations, each with a box to check it for deleting
         $body .= '<section class="panel">';
         if ($p['rows'] === []) {
             $body .= '<p class="none">' . self::t('No conversation matches.') . '</p>';
         } else {
             $base = $kept;
             unset($base['after']);
-            $body .= '<div class="wrap"><table class="list"><thead><tr><th>' . self::t('Last message') . '</th><th>' . self::t('Visitor') . '</th><th>' . self::t('Place') . '</th><th>'
+            $selected = array_flip($p['selected']);
+            if ($p['confirm'] === 'chats') {
+                $count = count($p['selected']);
+                $text = $count === 1 ? I18n::t('Delete this conversation, with all its messages?') : I18n::t('Delete {count} conversations, with all their messages?', ['count' => self::n($count)]);
+                $ids = '';
+                foreach ($p['selected'] as $id) {
+                    $ids .= '<input type="hidden" name="ids[]" value="' . (int) $id . '">';
+                }
+                $body .= '<form class="confirm pick-confirm" method="post" action="' . self::e($prefix . '/admin/delete') . '"><p>' . self::e($text) . ' ' . self::t('This cannot be undone.') . '</p>'
+                    . '<input type="hidden" name="csrf" value="' . self::e($p['csrf']) . '"><input type="hidden" name="what" value="chats">' . $ids
+                    . '<input type="hidden" name="back" value="' . self::e(http_build_query($kept)) . '">'
+                    . '<div class="actions" style="margin-top:12px"><button type="submit">' . self::t('Delete') . '</button>' . self::link(self::to($prefix, $kept), self::t('Cancel')) . '</div></form>';
+            }
+            $body .= '<form id="pick" method="get" action="' . self::e($prefix . '/admin/history') . '">';
+            foreach ($kept as $key => $value) {
+                $body .= '<input type="hidden" name="' . self::e((string) $key) . '" value="' . self::e((string) $value) . '">';
+            }
+            $body .= '<div class="pickbar"><button type="submit" name="confirm" value="chats" class="danger" data-pick-delete>' . self::t('Delete selected') . '<span data-pick-count></span></button></div>';
+            $body .= '<div class="wrap"><table class="list"><thead><tr><th class="pick"><input type="checkbox" data-pick-all hidden aria-label="' . self::t('Select all') . '"></th><th>' . self::t('Last message') . '</th><th>' . self::t('Visitor') . '</th><th>' . self::t('Place') . '</th><th>'
                 . self::t('IP address') . '</th><th>' . self::t('Page') . '</th><th class="num">' . self::t('Messages') . '</th><th>' . self::t('First question') . '</th><th></th></tr></thead><tbody>';
             foreach ($p['rows'] as $r) {
                 $open = self::to($prefix, $kept + ['c' => (int) $r['id']]);
-                $body .= '<tr><td class="nowrap">' . self::link($open, self::e(self::when((int) $r['updated'], $tz))) . '</td>'
+                $body .= '<tr><td class="pick"><input type="checkbox" name="sel[]" value="' . (int) $r['id'] . '"' . (isset($selected[(int) $r['id']]) ? ' checked' : '') . ' aria-label="' . self::t('Select this conversation') . '"></td>'
+                    . '<td class="nowrap">' . self::link($open, self::e(self::when((int) $r['updated'], $tz))) . '</td>'
                     . '<td>' . ($r['email'] !== '' ? self::link(self::to($prefix, ['email' => $r['email']] + $base), self::e((string) $r['email'])) : self::t('Anonymous')) . '</td>'
                     . '<td class="nowrap">' . ($r['country'] !== '' ? self::link(self::to($prefix, ['country' => $r['country']] + $base), self::country((string) $r['country'], (string) $r['name'], (string) $r['city'])) : self::t('Unknown')) . '</td>'
                     . '<td class="nowrap">' . self::link(self::to($prefix, ['ip' => $r['ip']] + $base), self::e((string) $r['ip'])) . '</td>'
@@ -464,7 +490,7 @@ CSS;
                     . '<td>' . self::link($open, '<span class="cut">' . self::e((string) $r['first']) . '</span>') . '</td>'
                     . '<td>' . self::marks($r) . '</td></tr>';
             }
-            $body .= '</tbody></table></div>';
+            $body .= '</tbody></table></div></form>';
             $body .= '<div class="pager"><span>' . ($p['after'] !== '' ? self::link(self::to($prefix, $base), self::t('Newest')) : '') . '</span>'
                 . '<span>' . ($p['next'] !== '' ? self::link(self::to($prefix, $base + ['after' => $p['next']]), self::t('Older')) : '') . '</span></div>';
         }
@@ -534,7 +560,7 @@ CSS;
             $out .= self::link(self::to($prefix, $here + ['confirm' => 'email']), self::t('Delete everything of this email'));
         }
         $out .= self::link(self::to($prefix, $here + ['confirm' => 'ip']), self::t('Delete everything of this IP address')) . '</div>';
-        if ($p['confirm'] !== '') {
+        if (in_array($p['confirm'], ['chat', 'email', 'ip'], true)) {
             [$text, $value] = match ($p['confirm']) {
                 'email' => [I18n::t('Delete every conversation of {email}, with all their messages?', ['email' => (string) $c['email']]), (string) $c['email']],
                 'ip' => [I18n::t('Delete every conversation of the IP address {ip}, with all their messages?', ['ip' => (string) $c['ip']]), (string) $c['ip']],

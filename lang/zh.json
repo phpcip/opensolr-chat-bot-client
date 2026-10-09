@@ -239,5 +239,10 @@
     "Pages made in another language:": "用其他语言生成的页面：",
     "make the signature with the identity key, for example:": "用身份密钥计算签名，例如：",
     "To check your code: for visitor@example.com it must give": "检查您的代码：对 visitor@example.com 必须得到",
-    "Every language, step by step:": "每种语言的详细步骤："
+    "Every language, step by step:": "每种语言的详细步骤：",
+    "Delete selected": "删除所选",
+    "Select all": "全选",
+    "Select this conversation": "选择此对话",
+    "Delete {count} conversations, with all their messages?": "删除 {count} 个对话及其全部消息？",
+    "Check the conversations to delete first.": "请先勾选要删除的对话。"
 }

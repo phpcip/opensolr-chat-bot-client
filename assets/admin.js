@@ -37,6 +37,39 @@
         }
       }
     }
+    // The boxes of the History: check all, the count on the button, the button off while nothing is checked
+    var pick = document.getElementById('pick');
+    if (pick) {
+      var all = pick.querySelector('[data-pick-all]');
+      var button = pick.querySelector('[data-pick-delete]');
+      var count = pick.querySelector('[data-pick-count]');
+      var boxes = pick.querySelectorAll('input[name="sel[]"]');
+      var update = function () {
+        var n = 0;
+        for (var j = 0; j < boxes.length; j++) {
+          if (boxes[j].checked) {
+            n++;
+          }
+        }
+        all.checked = n > 0 && n === boxes.length;
+        all.indeterminate = n > 0 && n < boxes.length;
+        button.disabled = n === 0;
+        count.textContent = n > 0 ? ' (' + n + ')' : '';
+      };
+      all.hidden = false;
+      all.addEventListener('change', function () {
+        for (var j = 0; j < boxes.length; j++) {
+          boxes[j].checked = all.checked;
+        }
+        update();
+      });
+      pick.addEventListener('change', function (e) {
+        if (e.target && e.target.name === 'sel[]') {
+          update();
+        }
+      });
+      update();
+    }
     // The conversation dialog: focused when it opens, closed with Escape
     var dialog = document.getElementById('conversation');
     if (dialog) {

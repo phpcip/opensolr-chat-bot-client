@@ -239,5 +239,10 @@
     "Pages made in another language:": "Pagini făcute în alt limbaj:",
     "make the signature with the identity key, for example:": "calculați semnătura cu cheia de identitate, de exemplu:",
     "To check your code: for visitor@example.com it must give": "Ca să vă verificați codul: pentru visitor@example.com trebuie să dea",
-    "Every language, step by step:": "Fiecare limbaj, pas cu pas:"
+    "Every language, step by step:": "Fiecare limbaj, pas cu pas:",
+    "Delete selected": "Șterge selecția",
+    "Select all": "Selectează tot",
+    "Select this conversation": "Selectează această conversație",
+    "Delete {count} conversations, with all their messages?": "Ștergeți {count} conversații, cu toate mesajele lor?",
+    "Check the conversations to delete first.": "Bifați întâi conversațiile de șters."
 }

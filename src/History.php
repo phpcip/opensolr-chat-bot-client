@@ -149,6 +149,65 @@ final class History
     }
 
     /**
+     * The ids of a selection (at most a page of them), as numbers, without repeats.
+     *
+     * @param list<string> $values
+     * @return list<int>
+     */
+    public static function ids(array $values): array
+    {
+        $ids = [];
+        foreach ($values as $value) {
+            if (preg_match('/^[1-9]\d{0,17}$/', $value)) {
+                $ids[(int) $value] = true;
+            }
+        }
+        return array_slice(array_keys($ids), 0, self::PAGE);
+    }
+
+    /**
+     * The conversations of the selection that still exist.
+     *
+     * @param list<int> $ids
+     * @return list<int>
+     */
+    public function existing(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        $stmt = $this->store->pdo()->prepare('SELECT id FROM chats WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY updated DESC, id DESC');
+        $stmt->execute($ids);
+        return array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    /**
+     * Deletes the conversations of a selection, with all their messages; returns how many were deleted.
+     *
+     * @param list<int> $ids
+     */
+    public function deleteChats(array $ids): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+        $in = '(' . implode(',', array_fill(0, count($ids), '?')) . ')';
+        $pdo = $this->store->pdo();
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            $pdo->prepare('DELETE FROM turns WHERE chat_id IN ' . $in)->execute($ids);
+            $stmt = $pdo->prepare('DELETE FROM chats WHERE id IN ' . $in);
+            $stmt->execute($ids);
+            $deleted = $stmt->rowCount();
+            $pdo->exec('COMMIT');
+        } catch (\Throwable $e) {
+            $pdo->exec('ROLLBACK');
+            throw $e;
+        }
+        return $deleted;
+    }
+
+    /**
      * Deletes a conversation, or every conversation of an email or an IP address (and the place of the address);
      * returns how many conversations were deleted.
      */

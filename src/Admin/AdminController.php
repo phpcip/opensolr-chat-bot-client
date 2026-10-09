@@ -378,10 +378,17 @@ final class AdminController
         [$rows, $next] = $history->page($filters, $since, $this->request->query('after', 40));
         $chat = ctype_digit($this->request->query('c', 19)) ? $history->conversation((int) $this->request->query('c', 19)) : null;
         $confirm = $this->request->query('confirm', 10);
+        $notice = $this->session->takeFlash();
+        // The conversations checked in the list, asked once more before they are deleted
+        $selected = $confirm === 'chats' ? $history->existing(History::ids($this->request->queryList('sel', History::PAGE, 20))) : [];
+        if ($confirm === 'chats' && $selected === []) {
+            $confirm = '';
+            $notice = I18n::t('Check the conversations to delete first.');
+        }
         Response::html(200, InsightsView::history([
             'prefix' => $this->prefix,
             'csrf' => $this->session->csrf(),
-            'notice' => $this->session->takeFlash(),
+            'notice' => $notice,
             'timezone' => $this->settings->str('timezone'),
             'search' => $this->store->canSearch(),
             'filters' => $filters,
@@ -390,20 +397,24 @@ final class AdminController
             'next' => $next,
             'countries' => $history->countries(),
             'chat' => $chat,
-            'confirm' => in_array($confirm, ['chat', 'email', 'ip'], true) ? $confirm : '',
+            'confirm' => in_array($confirm, ['chat', 'email', 'ip', 'chats'], true) ? $confirm : '',
+            'selected' => $selected,
         ]), self::HEADERS);
     }
 
-    /** Deletes a conversation, or everything of an email or an IP address, then back to the history. */
+    /** Deletes a conversation, the conversations checked in the list, or everything of an email or an IP address, then back to the history. */
     private function delete(): void
     {
         $what = $this->request->post('what', 10);
-        $deleted = (new History($this->store))->delete($what, $this->request->post('value', 254));
+        $history = new History($this->store);
+        $deleted = $what === 'chats'
+            ? $history->deleteChats(History::ids($this->request->postList('ids', History::PAGE, 20)))
+            : $history->delete($what, $this->request->post('value', 254));
         $this->session->setFlash($deleted === 1 ? I18n::t('Deleted: 1 conversation.') : I18n::t('Deleted: {count} conversations.', ['count' => number_format($deleted)]));
         // Back to the same list, without the conversation that is gone
         parse_str($this->request->post('back', 2000), $back);
         $keep = [];
-        foreach (['days', 'who', 'email', 'country', 'ip', 'page', 'flag', 'q', 'link'] as $key) {
+        foreach (['days', 'who', 'email', 'country', 'ip', 'page', 'flag', 'q', 'link', 'after'] as $key) {
             if (isset($back[$key]) && is_string($back[$key]) && $back[$key] !== '' && !($what === $key && $back[$key] === $this->request->post('value', 254))) {
                 $keep[$key] = $back[$key];
             }

@@ -130,6 +130,39 @@ final class Request
         return is_string($value) ? substr($value, 0, $max) : '';
     }
 
+    /**
+     * A list parameter of the query string (name[]=a&name[]=b), at most $count values of at most $max bytes.
+     *
+     * @return list<string>
+     */
+    public function queryList(string $name, int $count, int $max = 200): array
+    {
+        parse_str((string) ($this->server['QUERY_STRING'] ?? ''), $params);
+        $out = [];
+        foreach (is_array($params[$name] ?? null) ? $params[$name] : [] as $value) {
+            if (is_string($value) && count($out) < $count) {
+                $out[] = substr($value, 0, $max);
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * A list field of the posted form (name[]), at most $count values of at most $max bytes.
+     *
+     * @return list<string>
+     */
+    public function postList(string $name, int $count, int $max = 200): array
+    {
+        $out = [];
+        foreach (is_array($this->post[$name] ?? null) ? $this->post[$name] : [] as $value) {
+            if (is_string($value) && count($out) < $count) {
+                $out[] = substr($value, 0, $max);
+            }
+        }
+        return $out;
+    }
+
     public function cookie(string $name): string
     {
         $value = $this->cookies[$name] ?? '';

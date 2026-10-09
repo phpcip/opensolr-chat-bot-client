@@ -239,5 +239,10 @@
     "Pages made in another language:": "Páginas hechas en otro lenguaje:",
     "make the signature with the identity key, for example:": "calcule la firma con la clave de identidad, por ejemplo:",
     "To check your code: for visitor@example.com it must give": "Para comprobar su código: para visitor@example.com debe dar",
-    "Every language, step by step:": "Cada lenguaje, paso a paso:"
+    "Every language, step by step:": "Cada lenguaje, paso a paso:",
+    "Delete selected": "Eliminar la selección",
+    "Select all": "Seleccionar todo",
+    "Select this conversation": "Seleccionar esta conversación",
+    "Delete {count} conversations, with all their messages?": "¿Eliminar {count} conversaciones, con todos sus mensajes?",
+    "Check the conversations to delete first.": "Marque primero las conversaciones que desea eliminar."
 }
