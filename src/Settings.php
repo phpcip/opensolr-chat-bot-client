@@ -41,12 +41,16 @@ final class Settings
     /** @var array<string, string|int> */
     private array $values;
     private bool $hosted;
+    /** @var list<string> */
+    private array $extraHosts;
 
     /**
      * @param array<string, string>|null $fixed a hosted chat: the account its host gives it (email, API key, index)
+     * @param list<string> $extraHosts a hosted chat: hosts its host allows besides the owner's domains
      */
-    public function __construct(private readonly Store $store, ?array $fixed = null)
+    public function __construct(private readonly Store $store, ?array $fixed = null, array $extraHosts = [])
     {
+        $this->extraHosts = array_values(array_filter(array_map(static fn ($h): string => strtolower(trim((string) $h)), $extraHosts), static fn (string $h): bool => $h !== ''));
         $this->hosted = $fixed !== null;
         $this->values = self::defaults();
         foreach ($store->settings() as $key => $value) {
@@ -86,7 +90,7 @@ final class Settings
                 $hosts[] = $line;
             }
         }
-        return $hosts;
+        return array_values(array_unique(array_merge($hosts, $this->extraHosts)));
     }
 
     /** A host name written by the admin, reduced to its host ('' when it is not one): scheme, port and path dropped. */

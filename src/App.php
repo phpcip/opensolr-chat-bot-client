@@ -27,14 +27,14 @@ final class App
     private ?string $configError = null;
     private ?Store $store = null;
     private ?Settings $settings = null;
-    /** @var array{account: array<string, string>, public_url: string, sso: callable(string): bool}|null */
+    /** @var array{account: array<string, string>, public_url: string, sso: callable(string): bool, extra_hosts: list<string>}|null */
     private ?array $hosted = null;
 
     /**
      * A hosted chat (config hosted): its host gives the account (email, API key, index), the public origin of its
      * URLs and the check of a one-time sign-in token; the admin has no password and no captcha.
      *
-     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>, hosted?: array{account: array<string, string>, public_url: string, sso: callable(string): bool}} $config
+     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>, hosted?: array{account: array<string, string>, public_url: string, sso: callable(string): bool, extra_hosts?: list<string>}} $config
      */
     public function __construct(array $config)
     {
@@ -48,7 +48,8 @@ final class App
             if (!is_array($h['account'] ?? null) || !is_callable($h['sso'] ?? null) || !preg_match('#^https://[A-Za-z0-9.-]+$#', $url)) {
                 $this->configError = 'The hosted config needs account, public_url (https://host) and sso.';
             } else {
-                $this->hosted = ['account' => array_map('strval', $h['account']), 'public_url' => $url, 'sso' => $h['sso']];
+                $this->hosted = ['account' => array_map('strval', $h['account']), 'public_url' => $url, 'sso' => $h['sso'],
+                    'extra_hosts' => array_values(array_map('strval', (array) ($h['extra_hosts'] ?? [])))];
             }
         }
         if ($this->dataDir === '') {
@@ -165,6 +166,6 @@ final class App
 
     private function settings(): Settings
     {
-        return $this->settings ??= new Settings($this->store(), $this->hosted['account'] ?? null);
+        return $this->settings ??= new Settings($this->store(), $this->hosted['account'] ?? null, $this->hosted['extra_hosts'] ?? []);
     }
 }
