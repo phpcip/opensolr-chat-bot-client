@@ -33,6 +33,8 @@ final class PublicRoutes
             'Content-Type' => 'application/javascript; charset=utf-8',
             'Cache-Control' => 'no-cache',
             'ETag' => $etag,
+            // Loaded by <script src> from the owner's pages, also on pages that require CORP (COEP)
+            'Cross-Origin-Resource-Policy' => 'cross-origin',
         ];
         $match = array_map('trim', explode(',', $this->request->header('If-None-Match')));
         if (in_array($etag, $match, true) || in_array('W/' . $etag, $match, true)) {

@@ -488,9 +488,21 @@
       css(host, { '--osc-accent': cfg.accent });
     }
     root = host.attachShadow({ mode: 'open' });
-    const style = el('style');
-    style.textContent = CSS;
-    root.appendChild(style);
+    // A constructed stylesheet is not inline CSS, so a page whose CSP has no style-src 'unsafe-inline' still styles the chat
+    let sheet = null;
+    try {
+      sheet = new CSSStyleSheet();
+      sheet.replaceSync(CSS);
+      root.adoptedStyleSheets = [sheet];
+    }
+    catch (e) {
+      sheet = null;
+    }
+    if (!sheet) {
+      const style = el('style');
+      style.textContent = CSS;
+      root.appendChild(style);
+    }
     ui.root = el('div', 'root');
     root.appendChild(ui.root);
     ui.launcher = button('launcher', cfg.launcherText || T.open);

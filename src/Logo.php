@@ -97,6 +97,7 @@ final class Logo
             'Cache-Control' => 'public, max-age=31536000, immutable',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'",
+            'Cross-Origin-Resource-Policy' => 'cross-origin',
         ], false);
         if (!$request->isHead()) {
             readfile($file);
