@@ -83,6 +83,23 @@ CSS;
             . '<body><main>' . $body . '</main></body></html>';
     }
 
+    /**
+     * Every time zone with its offset now, like "(UTC+03:00) Europe/Bucharest", in offset order.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    public static function timezones(): array
+    {
+        $now = new \DateTimeImmutable('now');
+        $zones = [];
+        foreach (\DateTimeZone::listIdentifiers() as $id) {
+            $off = (new \DateTimeZone($id))->getOffset($now);
+            $zones[] = [$id, $off, '(UTC' . ($off < 0 ? '-' : '+') . gmdate('H:i', abs($off)) . ') ' . str_replace('_', ' ', $id)];
+        }
+        usort($zones, static fn (array $a, array $b): int => $a[1] <=> $b[1] ?: strcmp($a[0], $b[0]));
+        return array_map(static fn (array $z): array => [$z[0], $z[2]], $zones);
+    }
+
     /** The admin of a hosted chat (set once per request by the controller). */
     public static function setHosted(bool $hosted): void
     {
@@ -269,8 +286,8 @@ CSS;
             . '<textarea id="instructions" name="instructions" maxlength="' . Settings::INSTRUCTIONS_MAX . '">' . $field('instructions') . '</textarea>'
             . '<p class="hint">' . self::t('Optional: your own instructions for the assistant (its tone, what to recommend, what to avoid). They are added after its built-in rules: it searches this site with the Opensolr search tools, answers only from what they find, links every page, product and PDF page it mentions and looks up facts with the other Opensolr tools. At most {max} characters.', ['max' => number_format(Settings::INSTRUCTIONS_MAX)]) . '</p>'
             . '<label for="timezone">' . self::t('Time zone') . '</label><select id="timezone" name="timezone">';
-        foreach (\DateTimeZone::listIdentifiers() as $zone) {
-            $body .= '<option value="' . self::e($zone) . '"' . ((string) ($v['timezone'] ?? '') === $zone ? ' selected' : '') . '>' . self::e($zone) . '</option>';
+        foreach (self::timezones() as [$zone, $label]) {
+            $body .= '<option value="' . self::e($zone) . '"' . ((string) ($v['timezone'] ?? '') === $zone ? ' selected' : '') . '>' . self::e($label) . '</option>';
         }
         $body .= '</select><p class="hint">' . self::t('The assistant\'s "now", and the dates of the commands.') . '</p></div></section>';
 
