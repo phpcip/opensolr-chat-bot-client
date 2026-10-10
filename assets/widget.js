@@ -1056,14 +1056,15 @@
   function report(path, data) {
     const body = JSON.stringify(data);
     try {
-      if (navigator.sendBeacon && navigator.sendBeacon(BASE + path, new Blob([body], { type: 'application/json' }))) {
+      // text/plain: a hosted chat lives on another site, and a page may send that there without asking first
+      if (navigator.sendBeacon && navigator.sendBeacon(BASE + path, new Blob([body], { type: 'text/plain;charset=UTF-8' }))) {
         return;
       }
     }
     catch (e) {
       // the fetch below sends it
     }
-    fetch(BASE + path, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: body }).catch(function () {});
+    fetch(BASE + path, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: body }).catch(function () {});
   }
 
   function onLinkOpen(e) {

@@ -65,7 +65,7 @@ final class ChatController
             $out->error(self::UNREADABLE);
             return;
         }
-        if (!$this->request->sameOrigin()) {
+        if (!$this->request->originAllowed($this->settings->hosted() ? $this->settings->allowedHosts() : null)) {
             $out->error('This chat answers only on its own site.');
             return;
         }

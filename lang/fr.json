@@ -244,5 +244,13 @@
     "Select all": "Tout sélectionner",
     "Select this conversation": "Sélectionner cette conversation",
     "Delete {count} conversations, with all their messages?": "Supprimer {count} conversations, avec tous leurs messages ?",
-    "Check the conversations to delete first.": "Cochez d'abord les conversations à supprimer."
+    "Check the conversations to delete first.": "Cochez d'abord les conversations à supprimer.",
+    "Embed code": "Code d’intégration",
+    "Domains of your site": "Domaines de votre site",
+    "One domain per line, like example.com. The chat opens only on the pages of these domains (and of their www. form); anywhere else the embed code shows nothing. At most {max}.": "Un domaine par ligne, par exemple example.com. Le chat ne s’ouvre que sur les pages de ces domaines (et de leur forme www.) ; partout ailleurs, le code d’intégration n’affiche rien. Au maximum {max}.",
+    "Add the domain of your site and save: until then the chat opens nowhere.": "Ajoutez le domaine de votre site et enregistrez : d’ici là, le chat ne s’ouvre nulle part.",
+    "Keep it on your server, never in a page.": "Conservez-la sur votre serveur, jamais dans une page.",
+    "{value} is not a domain name.": "{value} n’est pas un nom de domaine.",
+    "At most {max} domains.": "Au maximum {max} domaines.",
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Ouvrez le chatbot depuis votre Panneau de contrôle Opensolr : l’onglet WebCrawler de votre index, Chat Bot."
 }

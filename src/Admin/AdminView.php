@@ -14,6 +14,10 @@ use Opensolr\ChatBot\Settings;
 final class AdminView
 {
     public const TABS = ['account', 'assistant', 'window', 'limits', 'captcha', 'language', 'install'];
+    /** A hosted chat: the account and the captcha belong to its host, the embed code comes first */
+    public const HOSTED_TABS = ['install', 'assistant', 'window', 'limits', 'language'];
+
+    private static bool $hosted = false;
 
     private const CSS = <<<'CSS'
 :root{color-scheme:light}
@@ -79,27 +83,44 @@ CSS;
             . '<body><main>' . $body . '</main></body></html>';
     }
 
-    /** The names of the settings tabs, in the admin's language. */
+    /** The admin of a hosted chat (set once per request by the controller). */
+    public static function setHosted(bool $hosted): void
+    {
+        self::$hosted = $hosted;
+    }
+
+    /** @return list<string> the settings tabs of this chat, in order */
+    public static function tabs(): array
+    {
+        return self::$hosted ? self::HOSTED_TABS : self::TABS;
+    }
+
+    /** The names of the settings tabs of this chat, in the admin's language. */
     public static function tabNames(): array
     {
-        return [
+        $names = [
             'account' => I18n::t('Account'),
             'assistant' => I18n::t('Assistant'),
             'window' => I18n::t('Chat window'),
             'limits' => I18n::t('Limits'),
             'captcha' => I18n::t('Captcha'),
             'language' => I18n::t('Language'),
-            'install' => I18n::t('Add to your pages'),
+            'install' => self::$hosted ? I18n::t('Embed code') : I18n::t('Add to your pages'),
         ];
+        $out = [];
+        foreach (self::tabs() as $tab) {
+            $out[$tab] = $names[$tab];
+        }
+        return $out;
     }
 
     /** The brand, the sign-out button and the messages at the top of every admin page. */
     public static function top(string $prefix, string $csrf, string $notice, array $errors): string
     {
         $body = '<div class="top"><div class="brand"><h1>Opensolr Chat Bot</h1><span>' . self::t('The chatbot of this site: it answers from your Opensolr Index, through the Opensolr API.') . '</span></div>'
-            . '<form method="post" action="' . self::e($prefix . '/admin/logout') . '">'
+            . (self::$hosted ? '' : '<form method="post" action="' . self::e($prefix . '/admin/logout') . '">'
             . '<input type="hidden" name="csrf" value="' . self::e($csrf) . '">'
-            . '<button type="submit" class="plain">' . self::t('Sign out') . '</button></form></div>';
+            . '<button type="submit" class="plain">' . self::t('Sign out') . '</button></form>') . '</div>';
         if ($notice !== '') {
             $body .= '<div class="box ok" role="status">' . self::e($notice) . '</div>';
         }
@@ -186,31 +207,40 @@ CSS;
     {
         $v = $p['values'];
         $field = static fn (string $name): string => self::e((string) ($v[$name] ?? ''));
-        $tab = in_array($p['tab'], self::TABS, true) ? $p['tab'] : 'account';
+        $tabs = self::tabs();
+        $tab = in_array($p['tab'], $tabs, true) ? $p['tab'] : $tabs[0];
         $names = self::tabNames();
 
         $css = '';
-        foreach (self::TABS as $t) {
+        foreach ($tabs as $t) {
             $css .= '#tab-' . $t . ':checked~.tabs label[for=tab-' . $t . ']{color:#c05520;background:#ffffff;border-color:#e2e8f0;border-bottom-color:#c05520}'
                 . '#tab-' . $t . ':checked~.panes .pane-' . $t . '{display:block}'
                 . '#tab-' . $t . ':focus-visible~.tabs label[for=tab-' . $t . ']{outline:2px solid #1e293b;outline-offset:-2px}';
         }
-        $css .= '#tab-install:checked~.savebar{display:none}';
+        if (!self::$hosted) {
+            $css .= '#tab-install:checked~.savebar{display:none}';
+        }
 
         $body = self::top($p['prefix'], $p['csrf'], $p['notice'], $p['errors']);
 
         $body .= '<form method="post" action="' . self::e($p['prefix'] . '/admin') . '" enctype="multipart/form-data">'
             . '<input type="hidden" name="csrf" value="' . self::e($p['csrf']) . '">';
-        foreach (self::TABS as $t) {
+        foreach ($tabs as $t) {
             $body .= '<input type="radio" class="tab-r" name="tab" id="tab-' . $t . '" value="' . $t . '"' . ($t === $tab ? ' checked' : '') . '>';
         }
         $body .= '<div class="tabs">' . self::insightLinks($p['prefix'], '');
-        foreach (self::TABS as $t) {
+        foreach ($tabs as $t) {
             $body .= '<label for="tab-' . $t . '">' . self::e($names[$t]) . '</label>';
         }
         $body .= '</div><div class="panes">';
 
+        // Embed code and allowed domains of a hosted chat
+        if (self::$hosted) {
+            $body .= self::hostedInstall($p, $field);
+        }
+
         // Account
+        if (!self::$hosted) {
         $body .= '<section class="pane pane-account"><div class="card">'
             . '<div class="grid"><div><label for="opensolr_email">' . self::t('Email') . '</label>'
             . '<input type="email" id="opensolr_email" name="opensolr_email" maxlength="254" autocomplete="off" value="' . $field('opensolr_email') . '"></div>'
@@ -231,6 +261,7 @@ CSS;
             $body .= '<select id="index_name" name="index_name" disabled><option value="">' . self::t('Test the connection to list your indexes') . '</option></select>';
         }
         $body .= '</div></section>';
+        }
 
         // Assistant
         $body .= '<section class="pane pane-assistant"><div class="card">'
@@ -287,6 +318,7 @@ CSS;
             . '</div></section>';
 
         // Captcha
+        if (!self::$hosted) {
         $body .= '<section class="pane pane-captcha"><div class="card">'
             . '<p class="lead">' . self::t('reCAPTCHA v2, the checkbox. With both keys set, a visitor solves the captcha before the first question, and the admin asks for it before any page.') . '</p>'
             . '<div class="grid"><div><label for="captcha_site_key">' . self::t('Site key') . '</label>'
@@ -297,6 +329,7 @@ CSS;
             . '<p class="hint">' . ($p['captcha_secret_mask'] !== '' ? self::t('Saved. Leave empty to keep it.') : self::t('Not saved yet.')) . '</p></div></div>'
             . '<div class="grid">' . $number('pass_hours', I18n::t('After that the captcha is asked again.')) . '<div></div></div>'
             . '</div></section>';
+        }
 
         // Language
         $body .= '<section class="pane pane-language"><div class="card">'
@@ -308,6 +341,7 @@ CSS;
         $body .= '</select><p class="hint">' . self::t('The chat itself answers every visitor in the visitor\'s own language.') . '</p></div></section>';
 
         // Add to your pages
+        if (!self::$hosted) {
         $body .= '<section class="pane pane-install"><div class="card">'
             . '<p class="lead">' . self::t('Paste this before </body> on every page that shows the chat:') . '</p>'
             . '<pre>' . self::e($p['snippet']) . '</pre>'
@@ -324,10 +358,41 @@ CSS;
             . '<pre>' . self::e($p['snippet_other']) . '</pre>'
             . '<p class="hint">' . self::t('To check your code: for visitor@example.com it must give') . ' <code>' . self::e($p['example_sig']) . '</code>. '
             . self::t('Every language, step by step:') . ' <a href="https://opensolr.com/opensolr-chat-bot-docs/signed-in-visitors" target="_blank" rel="noopener">https://opensolr.com/opensolr-chat-bot-docs/signed-in-visitors</a></p></div></section>';
+        }
 
         $body .= '</div><div class="actions savebar"><button type="submit">' . self::t('Save settings') . '</button></div></form>'
             . '<script src="' . self::e($p['prefix'] . '/admin.js') . '" defer></script>';
 
         return self::page('Opensolr Chat Bot', $body, $css);
+    }
+
+    /**
+     * The first tab of a hosted chat: the domains whose pages may show it, the embed code, signed-in visitors.
+     *
+     * @param array<string, mixed> $p
+     */
+    private static function hostedInstall(array $p, callable $field): string
+    {
+        $domains = (string) ($p['values']['allowed_domains'] ?? '');
+        $out = '<section class="pane pane-install"><div class="card">'
+            . '<label for="allowed_domains">' . self::t('Domains of your site') . '</label>'
+            . '<textarea id="allowed_domains" name="allowed_domains" style="min-height:110px" placeholder="example.com">' . $field('allowed_domains') . '</textarea>'
+            . '<p class="hint">' . self::t('One domain per line, like example.com. The chat opens only on the pages of these domains (and of their www. form); anywhere else the embed code shows nothing. At most {max}.', ['max' => \Opensolr\ChatBot\Settings::DOMAINS_MAX]) . '</p>';
+        if (trim($domains) === '') {
+            $out .= '<div class="box bad">' . self::t('Add the domain of your site and save: until then the chat opens nowhere.') . '</div>';
+        }
+        $out .= '<p class="lead">' . self::t('Paste this before </body> on every page that shows the chat:') . '</p>'
+            . '<pre>' . self::e($p['snippet']) . '</pre>'
+            . '<h3>' . self::t('Signed-in visitors') . '</h3>'
+            . '<p>' . self::t('When your site has accounts, the chat can know who asked: the Stats and the History then show the email of a signed-in visitor instead of Anonymous. On the pages of a signed-in visitor, the tag carries the email and its signature:') . '</p>'
+            . '<pre>' . self::e($p['snippet_ident']) . '</pre>'
+            . '<p>' . self::t('EMAIL is the visitor\'s email, written for an HTML attribute. SIGNATURE is HMAC-SHA256 of that email in lower case, with the identity key of this chat, written in hex (64 characters). Your pages make it on your server, in any language. A visitor who is not signed in gets the first tag of this tab, without the two attributes. Without a valid signature the visitor is anonymous, so nobody can pass for somebody else.') . '</p>'
+            . '<p><strong>' . self::t('The identity key:') . '</strong></p>'
+            . '<pre>' . self::e($p['ident_key']) . '</pre>'
+            . '<p class="hint">' . self::t('Keep it on your server, never in a page.') . '</p>'
+            . '<pre>' . self::e($p['snippet_other']) . '</pre>'
+            . '<p class="hint">' . self::t('To check your code: for visitor@example.com it must give') . ' <code>' . self::e($p['example_sig']) . '</code></p>'
+            . '</div></section>';
+        return $out;
     }
 }

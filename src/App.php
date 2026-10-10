@@ -16,7 +16,9 @@ use Opensolr\ChatBot\Http\Response;
  */
 final class App
 {
-    private const ADMIN_ROUTES = ['/admin', '/admin/gate', '/admin/login', '/admin/logout', '/admin/test', '/admin/stats', '/admin/history', '/admin/delete'];
+    private const ADMIN_ROUTES = ['/admin', '/admin/gate', '/admin/login', '/admin/logout', '/admin/test', '/admin/stats', '/admin/history', '/admin/delete', '/admin/sso'];
+    /** The routes a hosted chat answers for the pages of its allowed domains */
+    private const CROSS_SITE_ROUTES = ['/config', '/chat', '/feedback', '/click'];
 
     private string $dataDir;
     private string $basePath;
@@ -25,9 +27,14 @@ final class App
     private ?string $configError = null;
     private ?Store $store = null;
     private ?Settings $settings = null;
+    /** @var array{account: array<string, string>, public_url: string, sso: callable(string): bool}|null */
+    private ?array $hosted = null;
 
     /**
-     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>} $config
+     * A hosted chat (config hosted): its host gives the account (email, API key, index), the public origin of its
+     * URLs and the check of a one-time sign-in token; the admin has no password and no captcha.
+     *
+     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>, hosted?: array{account: array<string, string>, public_url: string, sso: callable(string): bool}} $config
      */
     public function __construct(array $config)
     {
@@ -35,6 +42,15 @@ final class App
         $base = '/' . trim((string) ($config['base_path'] ?? ''), '/');
         $this->basePath = $base === '/' ? '' : $base;
         $this->trustedProxies = array_values(array_filter(array_map('strval', (array) ($config['trusted_proxies'] ?? [])), static fn (string $p): bool => $p !== ''));
+        if (isset($config['hosted'])) {
+            $h = $config['hosted'];
+            $url = rtrim((string) ($h['public_url'] ?? ''), '/');
+            if (!is_array($h['account'] ?? null) || !is_callable($h['sso'] ?? null) || !preg_match('#^https://[A-Za-z0-9.-]+$#', $url)) {
+                $this->configError = 'The hosted config needs account, public_url (https://host) and sso.';
+            } else {
+                $this->hosted = ['account' => array_map('strval', $h['account']), 'public_url' => $url, 'sso' => $h['sso']];
+            }
+        }
         if ($this->dataDir === '') {
             $this->configError = 'The data_dir is required.';
         } elseif (!preg_match('#^(/[A-Za-z0-9._~-]+)*$#', $this->basePath)) {
@@ -70,6 +86,24 @@ final class App
         $method = $request->method();
         $public = new PublicRoutes($request);
         $cookiePath = $this->basePath !== '' ? $this->basePath : '/';
+        $hosts = null;
+        if ($this->hosted !== null && in_array($route, self::CROSS_SITE_ROUTES, true)) {
+            // The pages of the allowed domains may call these from their own site; any other page is not answered
+            $hosts = $this->settings()->allowedHosts();
+            $allowed = $request->originAllowed($hosts);
+            if ($allowed) {
+                header('Access-Control-Allow-Origin: ' . str_replace(["\r", "\n"], '', $request->header('Origin')));
+            }
+            header('Vary: Origin');
+            if ($method === 'OPTIONS') {
+                Response::send($allowed ? 204 : 403, '', $allowed ? [
+                    'Access-Control-Allow-Methods' => 'GET, POST',
+                    'Access-Control-Allow-Headers' => 'Content-Type, Accept',
+                    'Access-Control-Max-Age' => '600',
+                ] : [], false);
+                return;
+            }
+        }
 
         if ($route === '/widget.js' || $route === '/admin.js' || $route === '/config' || $route === '/logo') {
             if ($method !== 'GET') {
@@ -96,7 +130,7 @@ final class App
                 Response::json(405, ['error' => 'method_not_allowed'], ['Allow' => 'POST']);
                 return;
             }
-            $public->report($route, new Journal($this->store(), $this->settings()->str('timezone')));
+            $public->report($route, new Journal($this->store(), $this->settings()->str('timezone')), $hosts);
             return;
         }
         if ($route === '/chat') {
@@ -118,7 +152,7 @@ final class App
                 return;
             }
             $session = new AdminSession($this->store(), $request, $cookiePath);
-            (new AdminController($request, $this->store(), $this->settings(), $session))->handle($route);
+            (new AdminController($request, $this->store(), $this->settings(), $session, $this->hosted))->handle($route);
             return;
         }
         Response::json(404, ['error' => 'not_found']);
@@ -131,6 +165,6 @@ final class App
 
     private function settings(): Settings
     {
-        return $this->settings ??= new Settings($this->store());
+        return $this->settings ??= new Settings($this->store(), $this->hosted['account'] ?? null);
     }
 }

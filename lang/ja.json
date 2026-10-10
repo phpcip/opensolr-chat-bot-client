@@ -244,5 +244,13 @@
     "Select all": "すべて選択",
     "Select this conversation": "この会話を選択",
     "Delete {count} conversations, with all their messages?": "{count} 件の会話を、すべてのメッセージとともに削除しますか？",
-    "Check the conversations to delete first.": "先に削除する会話にチェックを入れてください。"
+    "Check the conversations to delete first.": "先に削除する会話にチェックを入れてください。",
+    "Embed code": "埋め込みコード",
+    "Domains of your site": "サイトのドメイン",
+    "One domain per line, like example.com. The chat opens only on the pages of these domains (and of their www. form); anywhere else the embed code shows nothing. At most {max}.": "1行に1つのドメイン（例: example.com）。チャットはこれらのドメイン（およびその www. 形式）のページでのみ開きます。それ以外の場所では埋め込みコードは何も表示しません。最大 {max} 件。",
+    "Add the domain of your site and save: until then the chat opens nowhere.": "サイトのドメインを追加して保存してください。それまではチャットはどこにも表示されません。",
+    "Keep it on your server, never in a page.": "サーバー上に保管し、ページには決して含めないでください。",
+    "{value} is not a domain name.": "{value} はドメイン名ではありません。",
+    "At most {max} domains.": "ドメインは最大 {max} 件です。",
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Opensolr コントロールパネルからチャットボットを開いてください: インデックスの WebCrawler タブ、Chat Bot。"
 }

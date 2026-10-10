@@ -35,6 +35,7 @@ final class AdminController
         'opensolr_email', 'opensolr_api_key', 'index_name', 'instructions', 'title', 'greeting', 'placeholder',
         'max_chars', 'max_translate_chars', 'questions_per_conversation', 'questions_per_visitor', 'window_seconds',
         'captcha_site_key', 'captcha_secret', 'pass_hours', 'timezone', 'launcher_text', 'accent', 'admin_language',
+        'allowed_domains',
     ];
     private const INDEX_LIST = 'index_list';
     private const INDEX_LIST_MAX = 1000;
@@ -46,21 +47,61 @@ final class AdminController
         private readonly Store $store,
         private readonly Settings $settings,
         private readonly AdminSession $session,
+        private readonly ?array $hosted = null,
     ) {
         $this->prefix = $request->prefix();
+        AdminView::setHosted($hosted !== null);
+    }
+
+    /**
+     * The admin of a hosted chat: no password and no captcha; a one-time token from the host's own signed-in page
+     * (GET /admin/sso?t=) opens a session, and the host's page is the only way in.
+     */
+    private function hostedAccess(string $route, bool $post): bool
+    {
+        if ($route === '/admin/sso' && !$post) {
+            $token = $this->request->query('t', 64);
+            if (preg_match('/^[a-f0-9]{64}$/', $token) && ($this->hosted['sso'])($token)) {
+                $this->session->start();
+                Response::redirect($this->url('/admin'), self::HEADERS);
+                return false;
+            }
+        }
+        if ($route === '/admin/sso' || !$this->session->isValid()) {
+            Response::html(403, AdminView::page('Opensolr Chat Bot', '<h1>Opensolr Chat Bot</h1><p class="lead">'
+                . AdminView::e(I18n::t('Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.')) . '</p>'), self::HEADERS);
+            return false;
+        }
+        return true;
     }
 
     public function handle(string $route): void
     {
         $language = $this->settings->str('admin_language');
         I18n::use($language !== '' ? $language : I18n::negotiate($this->request->header('Accept-Language')));
+        $post = $this->request->method() === 'POST';
+        if ($this->hosted !== null) {
+            $this->store->purgeIfDue($this->settings->int('window_seconds'), $this->settings->str('timezone'));
+            if ($post && !$this->request->sameOrigin()) {
+                Response::html(403, AdminView::page('Opensolr Chat Bot', '<h1>Opensolr Chat Bot</h1><div class="box bad">' . AdminView::e(I18n::t('This form was not sent from this site.')) . '</div>'), self::HEADERS);
+                return;
+            }
+            if (!$this->hostedAccess($route, $post)) {
+                return;
+            }
+            if ($route === '/admin/logout' || $route === '/admin/login' || $route === '/admin/gate' || $route === '/admin/test') {
+                Response::redirect($this->url('/admin'), self::HEADERS);
+                return;
+            }
+            $this->signedIn($route, $post);
+            return;
+        }
         $hash = $this->store->adminPasswordHash();
         if ($hash === null) {
             Response::html(503, AdminView::noPassword(), self::HEADERS);
             return;
         }
         $this->store->purgeIfDue($this->settings->int('window_seconds'), $this->settings->str('timezone'));
-        $post = $this->request->method() === 'POST';
         if ($post && !$this->request->sameOrigin()) {
             Response::html(403, AdminView::login($this->url('/admin/login'), $this->session->loginToken(), I18n::t('This form was not sent from this site.'), $this->captchaKey()), self::LOGIN_HEADERS);
             return;
@@ -86,6 +127,12 @@ final class AdminController
             Response::redirect($this->url('/admin/login'), self::HEADERS);
             return;
         }
+        $this->signedIn($route, $post);
+    }
+
+    /** Every page of a signed-in admin. */
+    private function signedIn(string $route, bool $post): void
+    {
         if ($post && !$this->session->checkCsrf($this->request->post('csrf', 200))) {
             $this->render([I18n::t('The form expired. Please try again.')], '', null, 400);
             return;
@@ -221,12 +268,14 @@ final class AdminController
     {
         $input = $this->posted();
         [$values, $errors] = $this->settings->validate($input);
-        $indexes = $this->indexes();
+        $indexes = $this->hosted !== null ? [] : $this->indexes();
         $names = array_column($indexes, 'index_name');
         $index = trim($input['index_name']);
         $accountChanged = (isset($values['opensolr_email']) && $values['opensolr_email'] !== $this->settings->str('opensolr_email'))
             || (isset($values['opensolr_api_key']) && $values['opensolr_api_key'] !== $this->settings->str('opensolr_api_key'));
-        if ($accountChanged) {
+        if ($this->hosted !== null) {
+            $accountChanged = false;
+        } elseif ($accountChanged) {
             $values['index_name'] = '';
         } elseif ($indexes === []) {
             $values['index_name'] = $this->settings->str('index_name');
@@ -260,7 +309,7 @@ final class AdminController
             $this->store->deleteMeta(self::INDEX_LIST);
             $this->session->setFlash(I18n::t('Saved. The account changed: test the connection, then choose the index.'));
         } else {
-            $this->session->setFlash($values['index_name'] === '' ? I18n::t('Saved. Choose the index the chat answers from.') : I18n::t('Saved.'));
+            $this->session->setFlash($this->hosted === null && $values['index_name'] === '' ? I18n::t('Saved. Choose the index the chat answers from.') : I18n::t('Saved.'));
         }
         Response::redirect($this->url('/admin') . '?tab=' . $this->tab(), self::HEADERS);
     }
@@ -335,6 +384,8 @@ final class AdminController
                 }
             }
         }
+        // The embed code of a hosted chat is pasted on another site: its address is absolute
+        $src = ($this->hosted !== null ? $this->hosted['public_url'] : '') . $this->prefix . '/widget.js';
         Response::html($status, AdminView::settings([
             'prefix' => $this->prefix,
             'csrf' => $this->session->csrf(),
@@ -344,8 +395,8 @@ final class AdminController
             'indexes' => $this->indexes(),
             'errors' => $errors,
             'notice' => $notice,
-            'snippet' => '<script src="' . $this->prefix . '/widget.js" defer></script>',
-            'snippet_ident' => '<script src="' . $this->prefix . '/widget.js" data-ident="EMAIL" data-ident-sig="SIGNATURE" defer></script>',
+            'snippet' => '<script src="' . $src . '" defer></script>',
+            'snippet_ident' => '<script src="' . $src . '" data-ident="EMAIL" data-ident-sig="SIGNATURE" defer></script>',
             'snippet_php' => '<script src="' . $this->prefix . '/widget.js"<?= \\Opensolr\\ChatBot\\Identity::attributes(' . var_export($this->store->dir(), true) . ', $email) ?> defer></script>',
             'snippet_other' => "Python:\nimport hmac, hashlib\nsignature = hmac.new(IDENTITY_KEY.encode(), email.strip().lower().encode(), hashlib.sha256).hexdigest()\n\n"
                 . "Node.js:\nconst crypto = require('crypto');\nconst signature = crypto.createHmac('sha256', IDENTITY_KEY).update(email.trim().toLowerCase()).digest('hex');",
@@ -426,10 +477,10 @@ final class AdminController
     private function tab(): string
     {
         $tab = $this->request->method() === 'POST' ? $this->request->post('tab', 20) : $this->request->query('tab', 20);
-        if (in_array($tab, AdminView::TABS, true)) {
+        if (in_array($tab, AdminView::tabs(), true)) {
             return $tab;
         }
-        return $this->request->method() === 'POST' && $this->request->route() === '/admin/test' ? 'account' : AdminView::TABS[0];
+        return $this->request->method() === 'POST' && $this->request->route() === '/admin/test' ? 'account' : AdminView::tabs()[0];
     }
 
     private static function mask(string $secret): string

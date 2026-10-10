@@ -244,5 +244,13 @@
     "Select all": "Selectează tot",
     "Select this conversation": "Selectează această conversație",
     "Delete {count} conversations, with all their messages?": "Ștergeți {count} conversații, cu toate mesajele lor?",
-    "Check the conversations to delete first.": "Bifați întâi conversațiile de șters."
+    "Check the conversations to delete first.": "Bifați întâi conversațiile de șters.",
+    "Embed code": "Cod de încorporare",
+    "Domains of your site": "Domeniile site-ului dumneavoastră",
+    "One domain per line, like example.com. The chat opens only on the pages of these domains (and of their www. form); anywhere else the embed code shows nothing. At most {max}.": "Un domeniu pe rând, de exemplu example.com. Chatul se deschide doar pe paginile acestor domenii (și ale formei lor cu www.); în orice alt loc codul de încorporare nu afișează nimic. Cel mult {max}.",
+    "Add the domain of your site and save: until then the chat opens nowhere.": "Adăugați domeniul site-ului și salvați: până atunci chatul nu se deschide nicăieri.",
+    "Keep it on your server, never in a page.": "Păstrați-o pe server, niciodată într-o pagină.",
+    "{value} is not a domain name.": "{value} nu este un nume de domeniu.",
+    "At most {max} domains.": "Cel mult {max} domenii.",
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Deschideți chatbotul din Panoul de control Opensolr: tabul WebCrawler al indexului, Chat Bot."
 }

@@ -72,9 +72,11 @@ final class PublicRoutes
      * POST /feedback {turn, rating} and POST /click {turn, url}: the visitor's rating of an answer and a link of an
      * answer opened. Answered 204 whatever happened: nothing for a page to learn.
      */
-    public function report(string $route, Journal $journal): void
+    public function report(string $route, Journal $journal, ?array $hosts = null): void
     {
-        $body = $this->request->isJson() && $this->request->sameOrigin() ? $this->request->body(self::REPORT_BODY_MAX) : null;
+        // text/plain too: what a page sends to another site without asking first (sendBeacon, keepalive)
+        $readable = $this->request->isJson() || stripos($this->request->header('Content-Type'), 'text/plain') === 0;
+        $body = $readable && $this->request->originAllowed($hosts) ? $this->request->body(self::REPORT_BODY_MAX) : null;
         $data = $body !== null ? json_decode($body, true, 4) : null;
         $turn = is_array($data) && is_string($data['turn'] ?? null) ? $data['turn'] : '';
         try {

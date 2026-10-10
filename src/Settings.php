@@ -9,6 +9,9 @@ final class Settings
     public const INDEX_NAME_RE = '/^[A-Za-z0-9_]{1,50}$/';
     public const SECRETS = ['opensolr_api_key', 'captcha_secret'];
     public const INSTRUCTIONS_MAX = 4000;
+    public const DOMAINS_MAX = 50;
+    /** Kept by the host of a hosted chat, never edited in its admin */
+    public const HOSTED_FIXED = ['opensolr_email', 'opensolr_api_key', 'index_name', 'captcha_site_key', 'captcha_secret'];
 
     private const INTS = [
         'max_chars' => [1000, 50, 4000],
@@ -32,13 +35,19 @@ final class Settings
         'launcher_text' => '',
         'accent' => '',
         'admin_language' => '',
+        'allowed_domains' => '',
     ];
 
     /** @var array<string, string|int> */
     private array $values;
+    private bool $hosted;
 
-    public function __construct(private readonly Store $store)
+    /**
+     * @param array<string, string>|null $fixed a hosted chat: the account its host gives it (email, API key, index)
+     */
+    public function __construct(private readonly Store $store, ?array $fixed = null)
     {
+        $this->hosted = $fixed !== null;
         $this->values = self::defaults();
         foreach ($store->settings() as $key => $value) {
             if (isset(self::INTS[$key])) {
@@ -50,6 +59,51 @@ final class Settings
                 $this->values[$key] = $value;
             }
         }
+        if ($fixed !== null) {
+            foreach (self::HOSTED_FIXED as $key) {
+                $this->values[$key] = (string) ($fixed[$key] ?? '');
+            }
+        }
+    }
+
+    /** A hosted chat: the account comes from the host, the pages that may show it from allowed_domains. */
+    public function hosted(): bool
+    {
+        return $this->hosted;
+    }
+
+    /**
+     * The hosts of allowed_domains (lower case, one per line).
+     *
+     * @return list<string>
+     */
+    public function allowedHosts(): array
+    {
+        $hosts = [];
+        foreach (preg_split('/\R/', $this->str('allowed_domains')) ?: [] as $line) {
+            $line = strtolower(trim($line));
+            if ($line !== '') {
+                $hosts[] = $line;
+            }
+        }
+        return $hosts;
+    }
+
+    /** A host name written by the admin, reduced to its host ('' when it is not one): scheme, port and path dropped. */
+    public static function hostOf(string $value): string
+    {
+        $value = strtolower(trim($value));
+        if ($value === '') {
+            return '';
+        }
+        if (!str_contains($value, '://')) {
+            $value = 'https://' . $value;
+        }
+        $host = parse_url($value, PHP_URL_HOST);
+        if (!is_string($host) || strlen($host) > 253 || !preg_match('/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,62}$|^localhost$/', $host)) {
+            return '';
+        }
+        return $host;
     }
 
     /**
@@ -132,15 +186,36 @@ final class Settings
      */
     public function validate(array $input): array
     {
-        $email = trim($input['opensolr_email'] ?? '');
-        $key = trim($input['opensolr_api_key'] ?? '');
-        $errors = self::accountErrors($email, $key);
+        $errors = [];
         $values = [];
-        if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
-            $values['opensolr_email'] = $email;
-        }
-        if ($key !== '' && self::validApiKey($key)) {
-            $values['opensolr_api_key'] = $key;
+        if (!$this->hosted) {
+            $email = trim($input['opensolr_email'] ?? '');
+            $key = trim($input['opensolr_api_key'] ?? '');
+            $errors = self::accountErrors($email, $key);
+            if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+                $values['opensolr_email'] = $email;
+            }
+            if ($key !== '' && self::validApiKey($key)) {
+                $values['opensolr_api_key'] = $key;
+            }
+        } else {
+            $hosts = [];
+            foreach (preg_split('/[\s,]+/', (string) ($input['allowed_domains'] ?? '')) ?: [] as $written) {
+                if (trim($written) === '') {
+                    continue;
+                }
+                $host = self::hostOf($written);
+                if ($host === '') {
+                    $errors[] = I18n::t('{value} is not a domain name.', ['value' => mb_substr(trim($written), 0, 80)]);
+                } elseif (!in_array($host, $hosts, true)) {
+                    $hosts[] = $host;
+                }
+            }
+            if (count($hosts) > self::DOMAINS_MAX) {
+                $errors[] = I18n::t('At most {max} domains.', ['max' => self::DOMAINS_MAX]);
+            } else {
+                $values['allowed_domains'] = implode("\n", $hosts);
+            }
         }
 
         $texts = [
@@ -177,6 +252,9 @@ final class Settings
 
         $labels = self::intLabels();
         foreach (self::INTS as $field => [, $min, $max]) {
+            if ($this->hosted && $field === 'pass_hours') {
+                continue;
+            }
             $raw = trim($input[$field] ?? '');
             if (!ctype_digit($raw) || (int) $raw < $min || (int) $raw > $max) {
                 $errors[] = I18n::t('{field} must be a whole number from {min} to {max}.', ['field' => $labels[$field], 'min' => number_format($min), 'max' => number_format($max)]);
@@ -185,18 +263,20 @@ final class Settings
             }
         }
 
-        $siteKey = trim($input['captcha_site_key'] ?? '');
-        if ($siteKey !== '' && !preg_match('/^[A-Za-z0-9_-]{10,100}$/', $siteKey)) {
-            $errors[] = I18n::t('The reCAPTCHA site key is not valid.');
-        } else {
-            $values['captcha_site_key'] = $siteKey;
-        }
-        $secret = trim($input['captcha_secret'] ?? '');
-        if ($secret !== '') {
-            if (preg_match('/^[A-Za-z0-9_-]{10,100}$/', $secret)) {
-                $values['captcha_secret'] = $secret;
+        if (!$this->hosted) {
+            $siteKey = trim($input['captcha_site_key'] ?? '');
+            if ($siteKey !== '' && !preg_match('/^[A-Za-z0-9_-]{10,100}$/', $siteKey)) {
+                $errors[] = I18n::t('The reCAPTCHA site key is not valid.');
             } else {
-                $errors[] = I18n::t('The reCAPTCHA secret key is not valid.');
+                $values['captcha_site_key'] = $siteKey;
+            }
+            $secret = trim($input['captcha_secret'] ?? '');
+            if ($secret !== '') {
+                if (preg_match('/^[A-Za-z0-9_-]{10,100}$/', $secret)) {
+                    $values['captcha_secret'] = $secret;
+                } else {
+                    $errors[] = I18n::t('The reCAPTCHA secret key is not valid.');
+                }
             }
         }
 
@@ -252,6 +332,9 @@ final class Settings
     {
         $known = array_flip(array_merge(array_keys(self::TEXTS), array_keys(self::INTS), ['timezone']));
         $values = array_intersect_key($values, $known);
+        if ($this->hosted) {
+            $values = array_diff_key($values, array_flip(self::HOSTED_FIXED));
+        }
         $this->store->saveSettings($values);
         foreach ($values as $key => $value) {
             $this->values[$key] = isset(self::INTS[$key]) ? (int) $value : $value;

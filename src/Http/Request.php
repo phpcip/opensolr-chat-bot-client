@@ -234,6 +234,44 @@ final class Request
         return $mine !== '' && hash_equals($mine, self::bareHost(trim($host, '[]')));
     }
 
+    /** The host of the page that sent this request (Origin, else Referer), '' when there is none. */
+    public function originHost(): string
+    {
+        $origin = $this->header('Origin');
+        if ($origin === '' || $origin === 'null') {
+            $origin = $this->header('Referer');
+        }
+        $host = $origin !== '' ? parse_url($origin, PHP_URL_HOST) : null;
+        $scheme = strtolower((string) parse_url($origin, PHP_URL_SCHEME));
+        if (!is_string($host) || $host === '' || !in_array($scheme, ['http', 'https'], true)) {
+            return '';
+        }
+        return self::bareHost(trim(strtolower($host), '[]'));
+    }
+
+    /**
+     * May the page that sent this request use the chat: a hosted chat answers the pages of its allowed domains (and
+     * their www. form), a chat on its own site only that site.
+     *
+     * @param list<string>|null $hosts the allowed domains of a hosted chat, null for a chat on its own site
+     */
+    public function originAllowed(?array $hosts): bool
+    {
+        if ($hosts === null) {
+            return $this->sameOrigin();
+        }
+        $host = $this->originHost();
+        if ($host === '') {
+            return false;
+        }
+        foreach ($hosts as $allowed) {
+            if (hash_equals($allowed, $host) || hash_equals('www.' . $allowed, $host) || hash_equals($allowed, 'www.' . $host)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function isHttps(): bool
     {
         $https = strtolower((string) ($this->server['HTTPS'] ?? ''));

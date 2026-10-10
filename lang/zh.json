@@ -244,5 +244,13 @@
     "Select all": "全选",
     "Select this conversation": "选择此对话",
     "Delete {count} conversations, with all their messages?": "删除 {count} 个对话及其全部消息？",
-    "Check the conversations to delete first.": "请先勾选要删除的对话。"
+    "Check the conversations to delete first.": "请先勾选要删除的对话。",
+    "Embed code": "嵌入代码",
+    "Domains of your site": "您网站的域名",
+    "One domain per line, like example.com. The chat opens only on the pages of these domains (and of their www. form); anywhere else the embed code shows nothing. At most {max}.": "每行一个域名，例如 example.com。聊天只在这些域名（及其 www. 形式）的页面上打开；在其他任何地方，嵌入代码都不显示任何内容。最多 {max} 个。",
+    "Add the domain of your site and save: until then the chat opens nowhere.": "请添加您网站的域名并保存：在此之前，聊天不会在任何地方打开。",
+    "Keep it on your server, never in a page.": "请将其保存在您的服务器上，切勿放在页面中。",
+    "{value} is not a domain name.": "{value} 不是域名。",
+    "At most {max} domains.": "最多 {max} 个域名。",
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "请从 Opensolr 控制面板打开聊天机器人：您索引的 WebCrawler 选项卡，Chat Bot。"
 }
