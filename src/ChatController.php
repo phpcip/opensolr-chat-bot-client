@@ -262,7 +262,7 @@ final class ChatController
     }
 
     /**
-     * One question at a time per visitor, questions per conversation (commands do not count) and per visitor: true
+     * One question at a time per conversation, questions per conversation (commands do not count) and per visitor: true
      * when admitted, false when another question is being answered (already told), else the message of the limit.
      */
     private function admit(EventStream $out, bool $isCommand, bool $isTranslation): bool|string
@@ -271,17 +271,19 @@ final class ChatController
         $limits = $this->limits();
         $ip = $this->request->clientIp();
         $visitor = $limits->key('visitor', $ip);
+        $conversationKey = (string) ($this->meta['key'] ?? '');
+        // The lock is per conversation: other people behind the same address (an office, a school) never wait for each other
+        $lockKey = $conversationKey !== '' ? $limits->key('lock', $conversationKey) : $visitor;
         $ttl = ($isTranslation ? Translator::TIMEOUT : ($isCommand ? 150 : Assistant::TIMEOUT)) + 30;
-        $token = $limits->acquire($visitor, $ttl);
+        $token = $limits->acquire($lockKey, $ttl);
         if ($token === null) {
             $out->error('Please wait for the answer to your last question.');
             return false;
         }
-        $this->lockKey = $visitor;
+        $this->lockKey = $lockKey;
         $this->lockToken = $token;
         register_shutdown_function(fn () => $this->releaseLock());
 
-        $conversationKey = (string) ($this->meta['key'] ?? '');
         $max = $this->settings->int('questions_per_conversation');
         if ($limits->conversationQuestions($conversationKey) >= $max) {
             return 'This conversation has reached ' . $max . ' questions. Start a new chat with the New chat button.';

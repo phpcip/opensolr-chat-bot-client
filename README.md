@@ -418,7 +418,7 @@ Every limit is checked on your server before anything is sent to the Opensolr AP
 | Characters of a text to translate | The same, for the text after `/translate`, counted on the text alone. |
 | Questions per visitor, in this many seconds | Counted per IP address, commands included. Past the limit the visitor is asked to try again later. |
 | Questions per conversation | Commands are not counted. Past the limit the visitor is asked to start a new chat with the New chat button. The count of a conversation is kept for 24 hours after its last question. |
-| One question at a time | A second question from the same IP address while an answer is being written is refused: "Please wait for the answer to your last question." |
+| One question at a time | A second question in the same conversation while its answer is being written is refused: "Please wait for the answer to your last question." Other visitors, including people behind the same IP address, are never blocked by it. |
 
 The counters of the limits are kept under keyed hashes, and old rows are deleted automatically. The [History](#history) keeps each message with the visitor's IP address for 30 days.
 
