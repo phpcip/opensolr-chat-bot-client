@@ -150,6 +150,9 @@
     '.md .h{font-size:16px}',
     '.md a{color:var(--osc-accent);text-decoration:underline;text-underline-offset:2px}',
     '.md a:hover{text-decoration-thickness:2px}',
+    '.md .md-sources{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #e5e1da}',
+    '.md .md-sources a{display:block;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 12px;border:1px solid #e5e1da;border-radius:999px;background:#f7f5f2;color:#4a4540;font-size:14px;line-height:1.5;text-decoration:none}',
+    '.md .md-sources a:hover,.md .md-sources a:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent);text-decoration:none}',
     '.md code{padding:1px 4px;border-radius:2px;background:#f1ede8;font-family:' + MONO + ';font-size:14px}',
     '.md pre{padding:8px 10px;overflow-x:auto;border:1px solid #e5e1da;border-radius:2px;background:#f7f5f2;white-space:pre}',
     '.md pre code{padding:0;background:#ffffff00;overflow-wrap:normal;word-break:normal}',
@@ -1090,10 +1093,40 @@
     }
   }
 
+  // A last paragraph made only of links ("[title](url) · [title](url)"): the sources of the answer, shown as pills
+  const SOURCES = /^\s*(?:\[[^\]\n]+\]\(https?:\/\/[^)\s]+\)\s*(?:·\s*)?)+$/;
+  const SOURCE = /\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g;
+
+  function sources(text) {
+    const at = text.lastIndexOf('\n\n');
+    const tail = at === -1 ? '' : text.slice(at + 2);
+    if (tail === '' || !SOURCES.test(tail)) {
+      return null;
+    }
+    const box = el('div', 'md-sources');
+    let m;
+    SOURCE.lastIndex = 0;
+    while ((m = SOURCE.exec(tail)) !== null) {
+      const url = safeUrl(m[2]);
+      if (!url) {
+        continue;
+      }
+      const a = anchor(url);
+      a.textContent = m[1];
+      a.title = m[1];
+      box.appendChild(a);
+    }
+    return box.childNodes.length ? { body: text.slice(0, at), box: box } : null;
+  }
+
   function fill(node, text) {
     node.textContent = '';
     try {
-      node.appendChild(markdown(text));
+      const src = sources(String(text));
+      node.appendChild(markdown(src ? src.body : text));
+      if (src) {
+        node.appendChild(src.box);
+      }
     }
     catch (e) {
       node.textContent = text;
