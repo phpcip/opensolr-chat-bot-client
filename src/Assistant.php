@@ -47,6 +47,32 @@ final class Assistant
     }
 
     /**
+     * The products of an answer (a link, a price and its og_image) as the widget takes them; anything else is dropped.
+     *
+     * @return list<array{link: string, title: string, price: float, currency: string, image: string}>
+     */
+    private static function products(mixed $items): array
+    {
+        $out = [];
+        foreach (is_array($items) ? array_slice($items, 0, 20) : [] as $p) {
+            $link = is_array($p) && is_string($p['link'] ?? null) ? $p['link'] : '';
+            $image = is_array($p) && is_string($p['image'] ?? null) ? $p['image'] : '';
+            if (!preg_match('~^https?://~i', $link) || !preg_match('~^https?://~i', $image) || strlen($link) > 2000 || strlen($image) > 2000
+                || !is_numeric($p['price'] ?? null)) {
+                continue;
+            }
+            $out[] = [
+                'link' => $link,
+                'title' => mb_substr(is_string($p['title'] ?? null) ? $p['title'] : '', 0, 300),
+                'price' => (float) $p['price'],
+                'currency' => mb_substr(is_string($p['currency'] ?? null) ? $p['currency'] : '', 0, 10),
+                'image' => $image,
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * The answer relayed as it arrives; the caller sends the end (done or the error message of the code).
      *
      * @param list<array{role: string, content: string}> $messages
@@ -86,6 +112,9 @@ final class Assistant
                         return true;
                     }
                     return $send($flow->flush()) && $this->out->progress($line);
+                }
+                if ($type === 'products') {
+                    return $this->out->products(self::products($event['items'] ?? null));
                 }
                 if ($type === 'error') {
                     $failure = is_scalar($event['msg'] ?? null) ? (string) $event['msg'] : 'ERROR';

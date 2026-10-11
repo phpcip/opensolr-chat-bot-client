@@ -70,6 +70,14 @@ final class EventStream
     }
 
     /**
+     * @param list<array{link: string, title: string, price: float, currency: string, image: string}> $items the products of the answer
+     */
+    public function products(array $items): bool
+    {
+        return $items === [] ? !$this->aborted() : $this->send(['type' => 'products', 'items' => $items]);
+    }
+
+    /**
      * @param array{turn?: string, rate?: bool} $extra the token of the recorded answer, and whether it can be rated
      */
     public function done(array $extra = []): void

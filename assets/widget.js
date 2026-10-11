@@ -58,6 +58,8 @@
     log: 'Conversation',
     back: 'Back to the commands',
     closeDialog: 'Close',
+    photo: 'See the photo',
+    openProduct: 'Open the product page',
     helpIntro: 'Start a message with a command to look something up at once, without waiting for the assistant. Click an example to put it in the message box, change it if you like, and send it.',
     example: 'Put this example in the message box',
     codesLink: 'Table of language codes',
@@ -153,6 +155,23 @@
     '.md .md-sources{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #e5e1da}',
     '.md .md-sources a{display:block;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 12px;border:1px solid #e5e1da;border-radius:999px;background:#f7f5f2;color:#4a4540;font-size:14px;line-height:1.5;text-decoration:none}',
     '.md .md-sources a:hover,.md .md-sources a:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent);text-decoration:none}',
+    '.md .src-row{display:flex;align-items:center;gap:6px;max-width:100%}',
+    '.thumb{display:inline-block;width:40px;height:40px;margin:0 8px 0 0;padding:0;border:1px solid #e5e1da;border-radius:2px;background:#ffffff;vertical-align:middle;overflow:hidden;cursor:zoom-in}',
+    '.md-sources .thumb{flex:0 0 auto;margin:0}',
+    '.thumb:hover,.thumb:focus-visible{border-color:var(--osc-accent);outline:none}',
+    '.thumb img{display:block;width:100%;height:100%;object-fit:cover}',
+    '.lb{position:fixed;top:0;right:0;bottom:0;left:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:#1f1d1acc;font-family:inherit}',
+    '.lb:focus{outline:none}',
+    '.lbox{position:relative;display:flex;flex-direction:column;max-width:min(1100px,100%);max-height:100%;border:1px solid #d9d4cc;border-radius:2px;background:#ffffff;color:#1f1d1a;overflow:hidden}',
+    '.lbox img{display:block;min-height:0;max-width:100%;max-height:calc(100vh - 160px);margin:0 auto;object-fit:contain;background:#ffffff}',
+    '.lcap{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #e5e1da;font-size:15px;line-height:1.4}',
+    '.ltitle{flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:anywhere}',
+    '.lprice{flex:0 0 auto;font-weight:600;color:var(--osc-accent);white-space:nowrap}',
+    '.lopen{flex:0 0 auto;padding:6px 12px;border:1px solid var(--osc-accent);border-radius:2px;background:var(--osc-accent);color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}',
+    '.lopen:hover,.lopen:focus-visible{background:#ffffff;color:var(--osc-accent)}',
+    '.lclose{position:absolute;top:8px;right:8px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #d9d4cc;border-radius:2px;background:#ffffff;color:#1f1d1a;cursor:pointer}',
+    '.lclose:hover,.lclose:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent)}',
+    '@media (max-width:480px){.lb{padding:8px}.lcap{flex-wrap:wrap}}',
     '.md code{padding:1px 4px;border-radius:2px;background:#f1ede8;font-family:' + MONO + ';font-size:14px}',
     '.md pre{padding:8px 10px;overflow-x:auto;border:1px solid #e5e1da;border-radius:2px;background:#f7f5f2;white-space:pre}',
     '.md pre code{padding:0;background:#ffffff00;overflow-wrap:normal;word-break:normal}',
@@ -805,7 +824,8 @@
           const turn = typeof m.turn === 'string' && /^[a-f0-9]{32}$/.test(m.turn) ? m.turn : '';
           messages.push({
             role: m.role, content: m.content, error: typeof m.error === 'string' ? m.error : '',
-            turn: turn, rate: turn !== '' && m.rate === true, rating: m.rating === 1 || m.rating === -1 ? m.rating : 0
+            turn: turn, rate: turn !== '' && m.rate === true, rating: m.rating === 1 || m.rating === -1 ? m.rating : 0,
+            products: m.role === 'assistant' ? cleanProducts(m.products) : []
           });
         }
       });
@@ -1006,7 +1026,7 @@
         }
       }
       else if (msg.content || msg.error) {
-        const box = bubbleBot(msg.content, msg.error);
+        const box = bubbleBot(msg.content, msg.error, msg.products);
         mark(box, msg);
         ui.log.appendChild(box);
       }
@@ -1019,12 +1039,12 @@
     return box;
   }
 
-  function bubbleBot(text, error) {
+  function bubbleBot(text, error, products) {
     const box = el('div', 'msg bot');
     box.setAttribute('dir', 'auto');
     if (text) {
       const md = el('div', 'md');
-      fill(md, text);
+      fill(md, text, products);
       box.appendChild(md);
     }
     if (error) {
@@ -1119,7 +1139,7 @@
     return box.childNodes.length ? { body: text.slice(0, at), box: box } : null;
   }
 
-  function fill(node, text) {
+  function fill(node, text, products) {
     node.textContent = '';
     try {
       const src = sources(String(text));
@@ -1127,9 +1147,148 @@
       if (src) {
         node.appendChild(src.box);
       }
+      thumbs(node, products);
     }
     catch (e) {
       node.textContent = text;
+    }
+  }
+
+  // The products of an answer as the server sent them (a link, a price and its og_image); anything else is dropped
+  function cleanProducts(items) {
+    const out = [];
+    (Array.isArray(items) ? items.slice(0, 20) : []).forEach(function (p) {
+      const link = p && safeUrl(p.link);
+      const image = p && safeUrl(p.image);
+      const price = p ? Number(p.price) : NaN;
+      if (link && image && isFinite(price)) {
+        out.push({ link: link, image: image, price: price, title: String(p.title || '').slice(0, 300), currency: String(p.currency || '').slice(0, 10) });
+      }
+    });
+    return out;
+  }
+
+  function bareUrl(url) {
+    try {
+      const u = new URL(url);
+      u.hash = '';
+      return u.href;
+    }
+    catch (e) {
+      return '';
+    }
+  }
+
+  // A small thumb before the first link of each product in the answer; a click opens its og_image large
+  function thumbs(node, products) {
+    if (!products || !products.length) {
+      return;
+    }
+    const byLink = {};
+    products.forEach(function (p) {
+      const k = bareUrl(p.link);
+      if (k && !byLink[k]) {
+        byLink[k] = p;
+      }
+    });
+    const done = {};
+    Array.prototype.forEach.call(node.querySelectorAll('a[href]'), function (a) {
+      const k = bareUrl(a.href);
+      const p = byLink[k];
+      if (!p || done[k]) {
+        return;
+      }
+      done[k] = true;
+      const b = button('thumb', T.photo);
+      b.title = p.title || T.photo;
+      const img = el('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', function () {
+        if (b.parentNode) {
+          b.parentNode.removeChild(b);
+        }
+      });
+      img.src = p.image;
+      b.appendChild(img);
+      b.addEventListener('click', function () { lightbox(p, b); });
+      if (a.parentNode && a.parentNode.classList.contains('md-sources')) {
+        const row = el('span', 'src-row');
+        a.parentNode.insertBefore(row, a);
+        row.appendChild(b);
+        row.appendChild(a);
+      }
+      else {
+        a.parentNode.insertBefore(b, a);
+      }
+    });
+  }
+
+  function money(p) {
+    return p.price.toFixed(2) + (p.currency ? ' ' + p.currency : '');
+  }
+
+  // The product's og_image large, over the page, with its title, price and link
+  function lightbox(p, from) {
+    closeLightbox();
+    const lb = ui.lightbox = el('div', 'lb');
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-modal', 'true');
+    lb.setAttribute('aria-label', p.title || T.photo);
+    lb.tabIndex = -1;
+    const box = el('div', 'lbox');
+    const img = el('img');
+    img.alt = p.title;
+    img.referrerPolicy = 'no-referrer';
+    img.src = p.image;
+    const cap = el('div', 'lcap');
+    const title = el('span', 'ltitle', p.title);
+    title.setAttribute('dir', 'auto');
+    const open = anchor(p.link);
+    open.className = 'lopen';
+    open.textContent = T.openProduct;
+    cap.appendChild(title);
+    cap.appendChild(el('span', 'lprice', money(p)));
+    cap.appendChild(open);
+    const x = button('lclose', T.closeDialog);
+    x.appendChild(icon(ICON.close, 18));
+    x.addEventListener('click', closeLightbox);
+    box.appendChild(img);
+    box.appendChild(cap);
+    box.appendChild(x);
+    lb.appendChild(box);
+    lb.addEventListener('click', function (e) {
+      if (e.target === lb) {
+        closeLightbox();
+      }
+    });
+    lb.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeLightbox();
+      }
+    });
+    ui.lightboxFrom = from;
+    root.appendChild(lb);
+    x.focus({ preventScroll: true });
+  }
+
+  function closeLightbox() {
+    const lb = ui.lightbox;
+    if (!lb) {
+      return;
+    }
+    ui.lightbox = null;
+    if (lb.parentNode) {
+      lb.parentNode.removeChild(lb);
+    }
+    const from = ui.lightboxFrom;
+    ui.lightboxFrom = null;
+    if (from && from.isConnected) {
+      from.focus({ preventScroll: true });
     }
   }
 
@@ -1146,7 +1305,7 @@
     md.hidden = true;
     box.appendChild(prog);
     box.appendChild(md);
-    return { box: box, prog: prog, progText: progText, md: md, text: '', started: false, raf: 0, checked: false };
+    return { box: box, prog: prog, progText: progText, md: md, text: '', products: [], started: false, raf: 0, checked: false };
   }
 
   function setProgress(a, text) {
@@ -1173,7 +1332,7 @@
   }
 
   function paint(a) {
-    fill(a.md, a.text);
+    fill(a.md, a.text, a.products);
     if (follow) {
       scrollBottom();
     }
@@ -1201,7 +1360,7 @@
     }
     const stick = follow;
     if (a.text) {
-      fill(a.md, a.text);
+      fill(a.md, a.text, a.products);
     }
     if (ev.type === 'captcha') {
       passed = false;
@@ -1225,7 +1384,7 @@
     if (error) {
       a.box.appendChild(el('p', 'err', error));
     }
-    const msg = { role: 'assistant', content: a.text, error: error, turn: '', rate: false, rating: 0 };
+    const msg = { role: 'assistant', content: a.text, error: error, turn: '', rate: false, rating: 0, products: a.products };
     if (!error && typeof ev.turn === 'string' && /^[a-f0-9]{32}$/.test(ev.turn)) {
       msg.turn = ev.turn;
       msg.rate = ev.rate === true;
@@ -1300,6 +1459,9 @@
           if (typeof ev.text === 'string' && ev.text !== '') {
             addText(a, ev.text);
           }
+        }
+        else if (ev.type === 'products') {
+          a.products = cleanProducts(ev.items);
         }
         else if (TERMINAL[ev.type] === true) {
           end(ev);
