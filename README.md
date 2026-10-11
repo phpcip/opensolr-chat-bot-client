@@ -25,7 +25,7 @@ You install it with Composer, mount it on one URL path of your own site, set it 
 
 - A chat window for your site that answers questions from the content of your Opensolr Index: pages you crawled or documents you ingested.
 - The answer is streamed: the visitor sees it as it is written, with a progress line ("Searching for: …") while the assistant searches.
-- Answers link to what they use: your pages, your products with their prices, and PDFs at the exact page.
+- Answers link to what they use: your pages, your products with their prices, and PDFs at the exact page. Every answer ends with its sources, shown as small pills, one per line (a long title is cut and shown whole on hover); when the model links none of the pages it used, the Opensolr assistant adds them.
 - The assistant knows the current date and time in your time zone, and can look for your latest content.
 - Every visitor is answered in their own language.
 - Commands such as `/search`, `/time`, `/rate` or `/translate` give a direct answer without waiting for the assistant.
