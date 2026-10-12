@@ -11,7 +11,7 @@ use Opensolr\ChatBot\Http\EventStream;
  */
 final class Assistant
 {
-    public const TIMEOUT = 90;
+    public const TIMEOUT = 180;
     public const FAILED = 'Sorry, I could not answer that right now. Please try again in a moment.';
     public const LATE = 'The answer took too long. Please try again in a moment.';
     private const LATE_CODES = ['ERROR_STREAM_STALLED', 'ERROR_STREAM_TIMEOUT', 'ERROR_ASSISTANT_TIMEOUT'];

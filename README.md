@@ -356,7 +356,7 @@ HMAC with SHA-256, the key being the identity key as text and the message the em
 
 ## What visitors get
 
-- **Streamed answers.** The answer appears as it is written. Before the first words, a progress line shows what the assistant is doing: "Reading your question…", "Searching for: …", "Reading the document …", "Answering…".
+- **Streamed answers.** The answer appears as it is written. Before the first words, a progress line shows what the assistant is doing: "Reading your question…", "Searching for: …", "Reading the whole document …", "Going through what was found…", "Answering…". A question that needs one long document (a law, a manual, a PDF) has it read whole before the answer, so it takes longer and a few more AI credits: one for every step of the model that writes something.
 - **Formatted answers.** Paragraphs, lists, tables and code. Links open in a new tab. Only `http` and `https` links become links, and no HTML from an answer is ever put into your page.
 - **Following the answer.** The window scrolls with the answer as it is written. Scrolling up stops that, so the visitor can read; back at the bottom, it follows again.
 - **One question at a time.** While an answer is written, the message box, Send and New chat are locked.

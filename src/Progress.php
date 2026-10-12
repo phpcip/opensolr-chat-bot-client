@@ -16,6 +16,7 @@ final class Progress
         if (($event['type'] ?? '') === 'status') {
             return match ((string) (is_scalar($event['stage'] ?? null) ? $event['stage'] : '')) {
                 'reading' => 'Reading your question…',
+                'reviewing' => 'Going through what was found…',
                 'answering' => 'Answering…',
                 default => '',
             };
@@ -30,7 +31,7 @@ final class Progress
             'opensolr_site_search' => 'Searching for: ' . $arg('query'),
             'opensolr_lexical_search' => 'Searching for the exact words: ' . $arg('query'),
             'opensolr_latest_search' => 'Searching for the latest on: ' . $arg('query'),
-            'opensolr_read_document' => 'Reading the document ' . self::value(self::basename($args['document_url'] ?? '')),
+            'opensolr_read_document' => 'Reading the whole document ' . self::value(is_string($event['title'] ?? null) && trim($event['title']) !== '' ? $event['title'] : self::basename($args['document_url'] ?? '')),
             'opensolr_describe_image' => 'Looking at the picture',
             'opensolr_find_place' => 'Looking up: ' . $arg('places'),
             'opensolr_local_time' => 'Checking the local time',
