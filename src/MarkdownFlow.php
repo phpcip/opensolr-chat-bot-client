@@ -54,6 +54,14 @@ final class MarkdownFlow
         return $this->wrote;
     }
 
+    /**
+     * True while text is held back because a link is still being written.
+     */
+    public function holding(): bool
+    {
+        return $this->pending !== '';
+    }
+
     private static function repair(string $text): string
     {
         $text = (string) preg_replace('/\][ \t]*\r?\n?[ \t]*\(((?:https?:\/\/|\/)[^)\s]*)/u', '](\1', $text);

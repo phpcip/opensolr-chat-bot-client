@@ -70,6 +70,14 @@ final class EventStream
     }
 
     /**
+     * The answer is waiting for a link to be written whole: the widget shows its dots until the next text.
+     */
+    public function hold(): bool
+    {
+        return $this->send(['type' => 'hold']);
+    }
+
+    /**
      * @param list<array{link: string, title: string, price: float, currency: string, image: string}> $items the products of the answer
      */
     public function products(array $items): bool

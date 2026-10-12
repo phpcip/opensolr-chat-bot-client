@@ -140,6 +140,10 @@
     '.progress{display:flex;align-items:center;gap:10px;min-height:22px;color:#4a4540;font-style:italic}',
     '.dot{flex:0 0 auto;width:8px;height:8px;border-radius:2px;background:var(--osc-accent);animation:osc-pulse 1s ease-in-out infinite}',
     '@keyframes osc-pulse{0%,100%{opacity:.25}50%{opacity:1}}',
+    '.wait{display:flex;gap:5px;align-items:center;height:22px}',
+    '.wait span{width:7px;height:7px;border-radius:2px;background:var(--osc-accent);animation:osc-pulse 1s ease-in-out infinite}',
+    '.wait span:nth-child(2){animation-delay:.2s}',
+    '.wait span:nth-child(3){animation-delay:.4s}',
     '@media (prefers-reduced-motion:reduce){.dot{animation:none}}',
     '.md>:first-child{margin-top:0}',
     '.md>:last-child{margin-bottom:0}',
@@ -1303,9 +1307,17 @@
     prog.appendChild(progText);
     const md = el('div', 'md');
     md.hidden = true;
+    // Three pulsing dots while the answer waits for a link to be written whole
+    const wait = el('div', 'wait');
+    wait.setAttribute('aria-hidden', 'true');
+    wait.appendChild(el('span'));
+    wait.appendChild(el('span'));
+    wait.appendChild(el('span'));
+    wait.hidden = true;
     box.appendChild(prog);
     box.appendChild(md);
-    return { box: box, prog: prog, progText: progText, md: md, text: '', products: [], started: false, raf: 0, checked: false };
+    box.appendChild(wait);
+    return { box: box, prog: prog, progText: progText, md: md, wait: wait, text: '', products: [], started: false, raf: 0, checked: false };
   }
 
   function setProgress(a, text) {
@@ -1431,11 +1443,13 @@
           return;
         }
         ended = true;
+        a.wait.hidden = true;
         clearTimeout(stall);
         clearTimeout(total);
         resolve(ev);
       }
       function abort(why) {
+        a.wait.hidden = true;
         if (!ended) {
           reason = why;
           ctrl.abort();
@@ -1457,7 +1471,16 @@
         }
         else if (ev.type === 'text') {
           if (typeof ev.text === 'string' && ev.text !== '') {
+            a.wait.hidden = true;
             addText(a, ev.text);
+          }
+        }
+        else if (ev.type === 'hold') {
+          if (a.started) {
+            a.wait.hidden = false;
+            if (follow) {
+              scrollBottom();
+            }
           }
         }
         else if (ev.type === 'products') {

@@ -85,12 +85,22 @@ final class Assistant
         $text = '';
         $first = null;
         $searches = [];
-        $send = function (string $piece) use (&$text, &$first): bool {
+        $holding = false;
+        $send = function (string $piece) use (&$text, &$first, &$holding, $flow): bool {
             if ($piece !== '') {
                 $text .= $piece;
                 $first ??= microtime(true);
+                $holding = false;
             }
-            return $this->out->text($piece);
+            if (!$this->out->text($piece)) {
+                return false;
+            }
+            // Text held back while a link is written: one signal, so the visitor sees the answer is still coming
+            if (!$holding && $text !== '' && $flow->holding()) {
+                $holding = true;
+                return $this->out->hold();
+            }
+            return true;
         };
         try {
             $this->api->stream('assistant_chat', [
