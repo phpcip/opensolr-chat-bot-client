@@ -39,6 +39,7 @@
     plus: ['M12 5v14', 'M5 12h14'],
     help: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', 'M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6', 'M12 17h.01'],
     send: ['M5 12h14', 'M13 6l6 6-6 6'],
+    stop: ['M7 7h10v10H7z'],
     back: ['M15 6l-6 6 6 6'],
     grip: ['M4 10V4h6', 'M4 4l7 7', 'M20 14v6h-6', 'M20 20l-7-7'],
     good: ['M7 10v11', 'M15 5.9L14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9z'],
@@ -55,6 +56,8 @@
     resizeTitle: 'Drag to resize',
     message: 'Your message',
     send: 'Send',
+    stop: 'Stop the answer',
+    stopped: 'Stopped.',
     log: 'Conversation',
     back: 'Back to the commands',
     closeDialog: 'Close',
@@ -252,6 +255,8 @@
   let follow = true;
   let lastTop = 0;
   let failsafe = 0;
+  // Stops the answer being written (the Stop button), null when none is
+  let stopAnswer = null;
   let sent = [];
   let recall = -1;
   let draft = '';
@@ -679,6 +684,9 @@
       if (!busy) {
         submit();
       }
+      else if (stopAnswer) {
+        stopAnswer();
+      }
     });
     ui.send.addEventListener('mousedown', function (e) { e.preventDefault(); });
     ui.input.addEventListener('beforeinput', function (e) {
@@ -950,6 +958,7 @@
     busy = on;
     ui.input.setAttribute('aria-disabled', on ? 'true' : 'false');
     ui.send.disabled = on;
+    setStop(false);
     ui.newChat.disabled = on;
     ui.log.setAttribute('aria-busy', on ? 'true' : 'false');
     clearTimeout(failsafe);
@@ -963,6 +972,17 @@
     }
     else if (was) {
       restoreCaret();
+    }
+  }
+
+  // The send button as Stop while an answer is being written, back to Send otherwise
+  function setStop(on) {
+    ui.send.textContent = '';
+    ui.send.appendChild(icon(on ? ICON.stop : ICON.send, 20));
+    ui.send.title = on ? T.stop : T.send;
+    ui.send.setAttribute('aria-label', on ? T.stop : T.send);
+    if (on) {
+      ui.send.disabled = false;
     }
   }
 
@@ -1388,6 +1408,9 @@
     if (ev.type === 'error' || ev.type === 'limit') {
       error = clip(ev.message) || T.failed;
     }
+    else if (ev.type === 'stopped') {
+      error = T.stopped;
+    }
     else if (!a.text) {
       error = T.empty;
     }
@@ -1443,11 +1466,20 @@
           return;
         }
         ended = true;
+        stopAnswer = null;
+        setStop(false);
+        ui.send.disabled = busy;
         a.wait.hidden = true;
         clearTimeout(stall);
         clearTimeout(total);
         resolve(ev);
       }
+      // The visitor's Stop: the request is closed, so the server stops working on it too
+      stopAnswer = function () {
+        abort('stop');
+        end({ type: 'stopped' });
+      };
+      setStop(true);
       function abort(why) {
         a.wait.hidden = true;
         if (!ended) {

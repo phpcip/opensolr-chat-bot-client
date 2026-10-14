@@ -9,6 +9,8 @@ final class OpensolrApi
     public const API_BASE = 'https://opensolr.com/solr_manager/api';
     public const API_BASE_AI = 'https://api.opensolr.com/solr_manager/api';
     public const STALL_SECONDS = 20;
+    // How often a running stream looks whether the visitor is still there
+    public const ALIVE_SECONDS = 1;
 
     private const AI_ENDPOINTS = [
         'vdb_info', 'vdb_search', 'local_time', 'currency_rates', 'vat_rates', 'vat_check', 'geo_distance',
@@ -84,13 +86,15 @@ final class OpensolrApi
      *
      * @param array<string, mixed> $body
      * @param callable(array<mixed>): bool $onEvent
+     * @param (callable(): bool)|null $alive false once the visitor is gone: the request is closed, so the API stops too
      */
-    public function stream(string $endpoint, array $body, callable $onEvent, int $timeout): void
+    public function stream(string $endpoint, array $body, callable $onEvent, int $timeout, ?callable $alive = null): void
     {
         $url = $this->aiUrl($endpoint);
         $state = ['status' => 0, 'type' => '', 'buffer' => '', 'body' => '', 'stopped' => false, 'reason' => null, 'error' => null];
         $started = microtime(true);
         $last = $started;
+        $checked = $started;
         $handleLine = function (string $line) use (&$state, $onEvent): void {
             $line = trim($line);
             if (!str_starts_with($line, 'data:')) {
@@ -146,8 +150,15 @@ final class OpensolrApi
                 return $state['stopped'] ? 0 : strlen($chunk);
             },
             CURLOPT_NOPROGRESS => false,
-            CURLOPT_XFERINFOFUNCTION => function () use (&$state, &$last, $started, $timeout): int {
+            CURLOPT_XFERINFOFUNCTION => function () use (&$state, &$last, &$checked, $started, $timeout, $alive): int {
                 $now = microtime(true);
+                if ($alive !== null && $now - $checked >= self::ALIVE_SECONDS) {
+                    $checked = $now;
+                    if (!$alive()) {
+                        $state['stopped'] = true;
+                        return 1;
+                    }
+                }
                 if ($now - $started > $timeout) {
                     $state['reason'] = 'ERROR_STREAM_TIMEOUT';
                     return 1;

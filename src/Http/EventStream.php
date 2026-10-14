@@ -44,6 +44,18 @@ final class EventStream
         return connection_aborted() === 1;
     }
 
+    /** False once the visitor closed the stream (Stop, or left the page): a comment line, which the widget skips, shows it. */
+    public function alive(): bool
+    {
+        if ($this->ended) {
+            return false;
+        }
+        $this->open();
+        echo ": ping\n\n";
+        flush();
+        return !$this->aborted();
+    }
+
     /**
      * @param array<string, mixed> $event
      */

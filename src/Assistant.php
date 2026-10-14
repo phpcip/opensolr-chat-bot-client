@@ -131,7 +131,7 @@ final class Assistant
                     return false;
                 }
                 return $type !== 'done';
-            }, self::TIMEOUT);
+            }, self::TIMEOUT, fn (): bool => $this->out->alive());
             if ($failure !== null) {
                 throw new \RuntimeException($failure);
             }

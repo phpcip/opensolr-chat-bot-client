@@ -64,7 +64,7 @@ final class Translator
                 }
                 $piece = $chunk['choices'][0]['delta']['content'] ?? '';
                 return !is_string($piece) || $piece === '' || $send($flow->push($piece));
-            }, self::TIMEOUT);
+            }, self::TIMEOUT, fn (): bool => $this->out->alive());
             if ($failure !== null) {
                 throw new \RuntimeException($failure);
             }
