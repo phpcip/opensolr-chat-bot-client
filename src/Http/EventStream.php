@@ -15,7 +15,8 @@ final class EventStream
             return;
         }
         $this->open = true;
-        ignore_user_abort(false);
+        // A closed stream is noticed by alive() and the sends, which stop the request to the API (dying inside it would leave it open)
+        ignore_user_abort(true);
         while (ob_get_level() > 0 && ob_end_clean()) {
         }
         if (!headers_sent()) {
