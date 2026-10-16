@@ -198,6 +198,8 @@
     '.input{flex:1 1 auto;display:block;min-width:0;height:44px;min-height:44px;max-height:160px;padding:9px 10px;border:1px solid #d9d4cc;border-radius:2px;background:#ffffff;color:#1f1d1a;font-size:15px;line-height:24px;resize:none;overflow-y:auto}',
     '.input:focus{outline:none;border-color:var(--osc-accent)}',
     '.input::placeholder{color:#6b645c;opacity:1}',
+    // An empty box shows its placeholder on one line, cut with an ellipsis where the browser does it, never on a second line
+    '.input:placeholder-shown{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.input[aria-disabled="true"]{background:#f7f5f2}',
     '.send{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:1px solid var(--osc-accent);border-radius:2px;background:var(--osc-accent);color:#ffffff}',
     '.send:hover:not(:disabled),.send:focus-visible{background:#ffffff;color:var(--osc-accent)}',
@@ -933,6 +935,11 @@
 
   function autosize() {
     const t = ui.input;
+    // An empty box is one line high, whatever the length of its placeholder
+    if (t.value === '') {
+      t.style.height = '44px';
+      return;
+    }
     t.style.height = '';
     t.style.height = Math.max(44, Math.min(t.scrollHeight + 2, 160)) + 'px';
   }
