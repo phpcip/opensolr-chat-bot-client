@@ -252,5 +252,9 @@
     "Keep it on your server, never in a page.": "请将其保存在您的服务器上，切勿放在页面中。",
     "{value} is not a domain name.": "{value} 不是域名。",
     "At most {max} domains.": "最多 {max} 个域名。",
-    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "请从 Opensolr 控制面板打开聊天机器人：您索引的 WebCrawler 选项卡，Chat Bot。"
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "请从 Opensolr 控制面板打开聊天机器人：您索引的 WebCrawler 选项卡，Chat Bot。",
+    "Account and plan": "账户和套餐",
+    "Index usage": "索引用量",
+    "Data Ingestion jobs": "Data Ingestion 任务",
+    "Solr errors": "Solr 错误"
 }

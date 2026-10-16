@@ -78,7 +78,7 @@ final class Assistant
      * @param list<array{role: string, content: string}> $messages
      * @return array{text: string, code: string, searches: list<array{0: string, 1: string}>, first: ?float}
      */
-    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp, string $conversationId = ''): array
+    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp, string $conversationId = '', string $visitorEmail = ''): array
     {
         $flow = new MarkdownFlow();
         $failure = null;
@@ -110,6 +110,8 @@ final class Assistant
                 'visitor_ip' => $visitorIp,
                 // The conversation's id: the Opensolr API keeps what its tools found for the next questions
                 'conversation_id' => $conversationId,
+                // The signed-in visitor, verified by the site's signature: the Opensolr API reads their account for them where it allows it
+                'visitor_email' => $visitorEmail,
             ], static fn ($v): bool => $v !== ''), function (array $event) use ($flow, &$failure, &$searches, $send): bool {
                 $type = is_string($event['type'] ?? null) ? $event['type'] : '';
                 if ($type === 'text') {

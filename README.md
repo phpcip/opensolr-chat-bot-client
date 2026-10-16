@@ -321,6 +321,7 @@ On the pages of a signed-in visitor, the script tag carries the email and its si
 - The identity key is in the "Add to your pages" tab of the admin. Keep it on your server, never in a page. It changes only if the chat's signing secret is replaced.
 - A visitor who is not signed in gets the plain tag, without the two attributes.
 - A visitor is signed in only when the signature is valid for that email. Anything else (no email, no signature, a wrong one) is an anonymous visitor, so nobody can pass for somebody else. The email is kept in lower case, and a conversation that starts anonymous and continues signed in takes the email.
+- The email of a signed-in visitor goes with every question to the Opensolr API. It is used only by the Opensolr indexes that answer questions about the visitor's own Opensolr account; for any other index it changes nothing.
 
 ### Pages made in PHP
 

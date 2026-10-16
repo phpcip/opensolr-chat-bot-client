@@ -252,5 +252,9 @@
     "Keep it on your server, never in a page.": "Bewahren Sie ihn auf Ihrem Server auf, niemals in einer Seite.",
     "{value} is not a domain name.": "{value} ist kein Domainname.",
     "At most {max} domains.": "Höchstens {max} Domains.",
-    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Öffnen Sie den Chatbot über Ihr Opensolr Control Panel: Registerkarte WebCrawler Ihres Index, Chat Bot."
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Öffnen Sie den Chatbot über Ihr Opensolr Control Panel: Registerkarte WebCrawler Ihres Index, Chat Bot.",
+    "Account and plan": "Konto und Tarif",
+    "Index usage": "Index-Nutzung",
+    "Data Ingestion jobs": "Data-Ingestion-Jobs",
+    "Solr errors": "Solr-Fehler"
 }

@@ -42,6 +42,10 @@ final class Progress
             'opensolr_postal_codes' => 'Looking up postal codes',
             'opensolr_ip_location' => 'Locating the IP address',
             'opensolr_analyze_text' => 'Analysing the text',
+            'opensolr_account' => 'Reading the account' . ($arg('email') !== '' ? ' ' . $arg('email') : ''),
+            'opensolr_index' => 'Reading the index ' . $arg('index_name'),
+            'opensolr_ingestion' => 'Reading the Data Ingestion jobs of ' . $arg('index_name'),
+            'opensolr_solr_errors' => 'Reading the Solr errors of ' . $arg('index_name'),
             default => null,
         };
         return $label === null ? '' : $label . '…';
@@ -71,6 +75,8 @@ final class Progress
             'opensolr_vat_check' => $arg('vat_numbers'),
             'opensolr_distance' => trim($arg('from') . ' > ' . $arg('to'), ' >'),
             'opensolr_ip_location' => $arg('ips'),
+            'opensolr_account' => $arg('email'),
+            'opensolr_index', 'opensolr_ingestion', 'opensolr_solr_errors' => trim($arg('index_name') . ' ' . $arg('job_id')),
             default => '',
         };
     }

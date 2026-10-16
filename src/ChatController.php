@@ -147,7 +147,7 @@ final class ChatController
         $messages[] = ['role' => 'user', 'content' => $question];
         self::timeLimit(Assistant::TIMEOUT + 30);
         $r = (new Assistant($this->api(), $out))->answer($messages, $this->settings->str('instructions'), $this->settings->str('timezone'), $ip,
-            hash('sha256', (string) ($this->meta['key'] ?? '')));
+            hash('sha256', (string) ($this->meta['key'] ?? '')), (string) ($this->meta['email'] ?? ''));
         $this->end($out, 'question', '', $r['text'], $r['code'] === '' ? '' : Assistant::message($r['code']), Assistant::outcome($r['code']), $r['searches'], $r['first']);
     }
 

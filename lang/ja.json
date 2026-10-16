@@ -252,5 +252,9 @@
     "Keep it on your server, never in a page.": "サーバー上に保管し、ページには決して含めないでください。",
     "{value} is not a domain name.": "{value} はドメイン名ではありません。",
     "At most {max} domains.": "ドメインは最大 {max} 件です。",
-    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Opensolr コントロールパネルからチャットボットを開いてください: インデックスの WebCrawler タブ、Chat Bot。"
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Opensolr コントロールパネルからチャットボットを開いてください: インデックスの WebCrawler タブ、Chat Bot。",
+    "Account and plan": "アカウントとプラン",
+    "Index usage": "インデックスの使用量",
+    "Data Ingestion jobs": "Data Ingestion ジョブ",
+    "Solr errors": "Solr のエラー"
 }

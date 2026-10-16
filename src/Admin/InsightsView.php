@@ -129,6 +129,10 @@ CSS;
         'postal_codes' => 'Postal codes',
         'ip_location' => 'IP addresses',
         'analyze_text' => 'Language and sentiment',
+        'account' => 'Account and plan',
+        'index' => 'Index usage',
+        'ingestion' => 'Data Ingestion jobs',
+        'solr_errors' => 'Solr errors',
     ];
 
     private static function e(string|int $value): string

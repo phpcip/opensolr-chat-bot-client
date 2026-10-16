@@ -252,5 +252,9 @@
     "Keep it on your server, never in a page.": "Păstrați-o pe server, niciodată într-o pagină.",
     "{value} is not a domain name.": "{value} nu este un nume de domeniu.",
     "At most {max} domains.": "Cel mult {max} domenii.",
-    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Deschideți chatbotul din Panoul de control Opensolr: tabul WebCrawler al indexului, Chat Bot."
+    "Open the chat bot from your Opensolr Control Panel: the WebCrawler tab of your index, Chat Bot.": "Deschideți chatbotul din Panoul de control Opensolr: tabul WebCrawler al indexului, Chat Bot.",
+    "Account and plan": "Cont și plan",
+    "Index usage": "Utilizarea indexului",
+    "Data Ingestion jobs": "Joburi Data Ingestion",
+    "Solr errors": "Erori Solr"
 }
