@@ -402,7 +402,7 @@ A message that starts with `/` runs a command: a direct lookup through the Opens
 
 ### Account commands
 
-When the Opensolr API offers them for the chat's index (today, the Opensolr Assistant on opensolr.com), four more commands come right after `/search`. They read the signed-in visitor's own Opensolr account, and only that account; a visitor who is not signed in is asked to sign in. They use no AI request.
+When the Opensolr API offers them for the chat's index (today, the Opensolr Assistant on opensolr.com), five more commands come right after `/search`. They read the signed-in visitor's own Opensolr account, and only that account; a visitor who is not signed in is asked to sign in. They use no AI request.
 
 | Command | What it does | Example |
 | --- | --- | --- |
@@ -410,6 +410,7 @@ When the Opensolr API offers them for the chat's index (today, the Opensolr Assi
 | `/index <index name>` | One of your Opensolr Indexes: its disk, bandwidth and documents against your plan's limits, its Solr version and server. | `/index my_index` |
 | `/ingestion <index name>` | Your Data Ingestion jobs. Without an index name: every index of your account with its jobs and the errors of the failed ones. With one: that index's latest jobs. | `/ingestion my_index` |
 | `/errors <index name>` | The latest errors Solr logged for one of your indexes (kept 7 days): when, on which server, and what happened. | `/errors my_index` |
+| `/support <words>` | Your support requests of the last year, newest first, each with whether Opensolr support answered it. With words: only the requests about them. | `/support invoice` |
 
 - The chat asks the Opensolr API once an hour whether its index offers them (`assistant_account`, tool `available`), and lists them in `/config` only then.
 - The signed-in visitor is the one of [Signed-in visitors](#signed-in-visitors).

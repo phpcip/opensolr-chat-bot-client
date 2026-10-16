@@ -133,6 +133,7 @@ CSS;
         'index' => 'Index usage',
         'ingestion' => 'Data Ingestion jobs',
         'solr_errors' => 'Solr errors',
+        'support_requests' => 'Support requests',
     ];
 
     private static function e(string|int $value): string

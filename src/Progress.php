@@ -46,6 +46,7 @@ final class Progress
             'opensolr_index' => 'Reading the index ' . $arg('index_name'),
             'opensolr_ingestion' => 'Reading the Data Ingestion jobs of ' . $arg('index_name'),
             'opensolr_solr_errors' => 'Reading the Solr errors of ' . $arg('index_name'),
+            'opensolr_support_requests' => 'Reading the support requests' . ($arg('words') !== '' ? ' about ' . $arg('words') : ''),
             default => null,
         };
         return $label === null ? '' : $label . '…';
@@ -77,6 +78,7 @@ final class Progress
             'opensolr_ip_location' => $arg('ips'),
             'opensolr_account' => $arg('email'),
             'opensolr_index', 'opensolr_ingestion', 'opensolr_solr_errors' => trim($arg('index_name') . ' ' . $arg('job_id')),
+            'opensolr_support_requests' => trim($arg('words') . ' ' . $arg('from') . ' ' . $arg('to')),
             default => '',
         };
     }

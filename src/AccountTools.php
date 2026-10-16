@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Opensolr\ChatBot;
 
 /**
- * The account commands (/account, /index, /ingestion, /errors): offered only when the Opensolr API says this chat's index
+ * The account commands (/account, /index, /ingestion, /errors, /support): offered only when the Opensolr API says this chat's index
  * answers questions about the signed-in visitor's own Opensolr account. They run for that visitor only.
  */
 final class AccountTools
 {
-    public const COMMANDS = ['account' => 'opensolr_account', 'index' => 'opensolr_index', 'ingestion' => 'opensolr_ingestion', 'errors' => 'opensolr_solr_errors'];
+    public const COMMANDS = ['account' => 'opensolr_account', 'index' => 'opensolr_index', 'ingestion' => 'opensolr_ingestion', 'errors' => 'opensolr_solr_errors', 'support' => 'opensolr_support_requests'];
     private const CHECK_SECONDS = 3600;
     private const TIMEOUT = 30;
 

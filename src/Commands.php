@@ -38,6 +38,7 @@ final class Commands
             'index' => ['/index <index name>', 'One of your Opensolr Indexes: its disk, bandwidth and documents against your plan\'s limits, its Solr version and server.', '/index my_index'],
             'ingestion' => ['/ingestion <index name>', 'Your Data Ingestion jobs. Without an index name: every index of your account with its jobs and the errors of the failed ones. With one: that index\'s latest jobs.', '/ingestion my_index'],
             'errors' => ['/errors <index name>', 'The latest errors Solr logged for one of your indexes (kept 7 days): when, on which server, and what happened.', '/errors my_index'],
+            'support' => ['/support <words>', 'Your support requests of the last year, newest first, each with whether Opensolr support answered it. With words: only the requests about them.', '/support invoice'],
         ] : [];
         $base = [
             'search' => ['/search <words>', 'Searches this site and lists the pages, products and PDF pages that match, each with its link.', '/search robotic lawn mower'],
@@ -139,7 +140,7 @@ final class Commands
         if (!isset($definitions[$name]) || $name === 'help') {
             return ($name === 'help' ? '' : self::t('There is no command /@name.', ['@name' => $m[1]]) . "\n\n") . $this->help();
         }
-        if ($args === '' && !in_array($name, ['time', 'ip', 'account', 'ingestion'], true)) {
+        if ($args === '' && !in_array($name, ['time', 'ip', 'account', 'ingestion', 'support'], true)) {
             return self::t('Write what to look up after the command, for example: `@example`', ['@example' => $definitions[$name][2]]);
         }
         // /translate is streamed by the chat; here only what is wrong with it
@@ -556,10 +557,10 @@ final class Commands
     {
         $params = [];
         $arg = trim($args, " \t\"'`");
-        if (str_contains($arg, '@')) {
+        if (str_contains($arg, '@') && !str_contains(trim($arg), ' ')) {
             $params['email'] = $arg;
         } elseif ($arg !== '') {
-            $params['index_name'] = $arg;
+            $params[$name === 'support' ? 'words' : 'index_name'] = $arg;
         }
         $data = AccountTools::run($this->api, $name, $this->visitorEmail, $params);
         if (is_string($data)) {
@@ -570,6 +571,7 @@ final class Commands
             'index' => self::indexText($data),
             'ingestion' => self::ingestionText($data),
             'errors' => self::errorsText($data),
+            'support' => self::supportText($data),
         };
     }
 
@@ -666,6 +668,30 @@ final class Commands
             $lines[] = self::jobLine((array) $job);
         }
         return implode("\n", $lines) . "\n\nJobs are kept 30 days.";
+    }
+
+    /** @param array<mixed> $d */
+    private static function supportText(array $d): string
+    {
+        $list = (array) ($d['matching'] ?? []);
+        if (!$list) {
+            return 'You have no support requests in the last year. Write to us on https://opensolr.com/contact or at help@opensolr.com.';
+        }
+        $lines = [];
+        if (($d['note'] ?? '') !== '') {
+            $lines[] = self::clean($d['note']);
+            $lines[] = '';
+        }
+        foreach ($list as $r) {
+            $lines[] = '- **' . self::clean($r['subject'] ?? '') . '** · opened ' . self::clean($r['opened'] ?? '') . ' · ' . self::clean($r['status'] ?? '');
+            $last = (array) ($r['last_message'] ?? []);
+            if ($last) {
+                $lines[] = '  Last, ' . self::clean($last['date'] ?? '') . ', from ' . self::clean($last['from'] ?? '') . ': ' . mb_substr(self::clean($last['text'] ?? ''), 0, 240);
+            }
+        }
+        $lines[] = '';
+        $lines[] = 'Ask the assistant about any of them for the whole thread.';
+        return implode("\n", $lines);
     }
 
     /** @param array<mixed> $d */
