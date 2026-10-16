@@ -114,7 +114,9 @@ final class App
             if ($route === '/logo') {
                 (new Logo($this->store()))->serve($request);
             } else {
-                $route === '/config' ? $public->config($this->settings(), new Logo($this->store())) : $public->widget(ltrim($route, '/'));
+                $route === '/config' ? $public->config($this->settings(), new Logo($this->store()), AccountTools::available($this->store(),
+                    new OpensolrApi($this->settings()->str('opensolr_email'), $this->settings()->str('opensolr_api_key'), $this->settings()->str('index_name'))))
+                    : $public->widget(ltrim($route, '/'));
             }
             return;
         }

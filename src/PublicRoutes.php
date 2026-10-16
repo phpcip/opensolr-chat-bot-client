@@ -47,10 +47,10 @@ final class PublicRoutes
         }
     }
 
-    public function config(Settings $settings, Logo $logo): void
+    public function config(Settings $settings, Logo $logo, bool $accountTools = false): void
     {
         $commands = [];
-        foreach (Commands::definitions($settings->int('max_translate_chars')) as $name => [$usage, $description, $example]) {
+        foreach (Commands::definitions($settings->int('max_translate_chars'), $accountTools) as $name => [$usage, $description, $example]) {
             $commands[] = ['name' => $name, 'usage' => $usage, 'description' => $description, 'example' => $example];
         }
         $required = $settings->captchaRequired();

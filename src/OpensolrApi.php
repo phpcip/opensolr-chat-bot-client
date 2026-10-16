@@ -14,7 +14,7 @@ final class OpensolrApi
 
     private const AI_ENDPOINTS = [
         'vdb_info', 'vdb_search', 'local_time', 'currency_rates', 'vat_rates', 'vat_check', 'geo_distance',
-        'address_geo', 'postal_codes', 'ip_geo', 'enrich_text', 'chat_completions', 'assistant_chat',
+        'address_geo', 'postal_codes', 'ip_geo', 'enrich_text', 'chat_completions', 'assistant_chat', 'assistant_account',
     ];
     private const BODY_MAX = 65536;
     private const LINE_MAX = 1048576;
@@ -52,6 +52,17 @@ final class OpensolrApi
     public function chat(array $body, int $timeout = 300): array
     {
         return $this->post($this->aiUrl('chat_completions'), $this->jsonBody($body), 'application/json', $timeout);
+    }
+
+    /**
+     * The account tools of the chat's index run directly (the account commands), as a JSON body.
+     *
+     * @param array<string, mixed> $body
+     * @return array<mixed>
+     */
+    public function account(array $body, int $timeout = 30): array
+    {
+        return $this->post($this->aiUrl('assistant_account'), $this->jsonBody($body), 'application/json', $timeout);
     }
 
     /**

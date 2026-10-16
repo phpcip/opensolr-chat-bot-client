@@ -20,6 +20,8 @@ final class Commands
         private readonly OpensolrApi $api,
         private readonly Settings $settings,
         private readonly string $visitorIp,
+        private readonly bool $accountTools = false,
+        private readonly string $visitorEmail = '',
     ) {
     }
 
@@ -28,9 +30,16 @@ final class Commands
      *
      * @return array<string, array{0: string, 1: string, 2: string}>
      */
-    public static function definitions(int $maxTranslateChars): array
+    public static function definitions(int $maxTranslateChars, bool $accountTools = false): array
     {
-        return [
+        // The signed-in visitor's own Opensolr account, where the Opensolr API offers it for this chat's index
+        $account = $accountTools ? [
+            'account' => ['/account', 'Your Opensolr plan: its price and limits, the AI requests used this month, and your indexes with the documents, disk and bandwidth each one uses.', '/account'],
+            'index' => ['/index <index name>', 'One of your Opensolr Indexes: its disk, bandwidth and documents against your plan\'s limits, its Solr version and server.', '/index my_index'],
+            'ingestion' => ['/ingestion <index name>', 'Your Data Ingestion jobs. Without an index name: every index of your account with its jobs and the errors of the failed ones. With one: that index\'s latest jobs.', '/ingestion my_index'],
+            'errors' => ['/errors <index name>', 'The latest errors Solr logged for one of your indexes (kept 7 days): when, on which server, and what happened.', '/errors my_index'],
+        ] : [];
+        $base = [
             'search' => ['/search <words>', 'Searches this site and lists the pages, products and PDF pages that match, each with its link.', '/search robotic lawn mower'],
             'time' => ['/time <place, coordinates or IP address>', 'The local date and time right now at a place, at coordinates or where an IP address is. Without anything after it: your own local time.', '/time Tokyo'],
             'rate' => ['/rate <amount> <currency> to <currency>', 'Today\'s exchange rate between currencies (three-letter codes), and the amount converted. Add a date as YYYY-MM-DD for a past day.', '/rate 100 EUR to RON'],
@@ -44,6 +53,8 @@ final class Commands
             'translate' => ['/translate <from>-<to> <text>', self::t('Translates a text of up to @max characters into another language. Write the two languages as codes from the table of language codes, joined by a hyphen (en-es: from English into Spanish), or only the language to translate into (es), and the language of the text is recognized.', ['@max' => number_format($maxTranslateChars)]), '/translate en-es What is this?'],
             'help' => ['/help', 'This list of commands.', '/help'],
         ];
+        // The account commands come right after /search
+        return ['search' => $base['search']] + $account + $base;
     }
 
     /**
@@ -51,7 +62,7 @@ final class Commands
      */
     private function commandList(): array
     {
-        return self::definitions($this->settings->int('max_translate_chars'));
+        return self::definitions($this->settings->int('max_translate_chars'), $this->accountTools);
     }
 
     /**
@@ -110,7 +121,7 @@ final class Commands
         }
         $name = strtolower($m[1]);
         $name = self::ALIASES[$name] ?? $name;
-        return isset(self::definitions(0)[$name]) ? $name : '';
+        return isset(self::definitions(0, true)[$name]) ? $name : '';
     }
 
     /**
@@ -128,12 +139,15 @@ final class Commands
         if (!isset($definitions[$name]) || $name === 'help') {
             return ($name === 'help' ? '' : self::t('There is no command /@name.', ['@name' => $m[1]]) . "\n\n") . $this->help();
         }
-        if ($args === '' && !in_array($name, ['time', 'ip'], true)) {
+        if ($args === '' && !in_array($name, ['time', 'ip', 'account', 'ingestion'], true)) {
             return self::t('Write what to look up after the command, for example: `@example`', ['@example' => $definitions[$name][2]]);
         }
         // /translate is streamed by the chat; here only what is wrong with it
         if ($name === 'translate') {
             return $this->translation($message)['error'] ?? 'The translation could not be written.';
+        }
+        if (isset(AccountTools::COMMANDS[$name])) {
+            return $this->commandAccount($name, $args);
         }
         return match ($name) {
             'search' => $this->commandSearch($args),
@@ -535,5 +549,138 @@ final class Commands
         $content = $answer['choices'][0]['message']['content'] ?? '';
         $reply = is_string($content) ? strtolower(trim($content)) : '';
         return preg_match('/^[^a-z]*([a-z]{2})\b/', $reply, $m) ? $m[1] : '';
+    }
+
+    /** An account command: the visitor's own account, read by the Opensolr API, in Markdown. */
+    private function commandAccount(string $name, string $args): string
+    {
+        $params = [];
+        $arg = trim($args, " \t\"'`");
+        if (str_contains($arg, '@')) {
+            $params['email'] = $arg;
+        } elseif ($arg !== '') {
+            $params['index_name'] = $arg;
+        }
+        $data = AccountTools::run($this->api, $name, $this->visitorEmail, $params);
+        if (is_string($data)) {
+            return self::clean($data);
+        }
+        return match ($name) {
+            'account' => self::accountText($data),
+            'index' => self::indexText($data),
+            'ingestion' => self::ingestionText($data),
+            'errors' => self::errorsText($data),
+        };
+    }
+
+    private static function mb(mixed $value): string
+    {
+        return number_format((float) $value, 2) . ' MB';
+    }
+
+    private static function yes(mixed $value): string
+    {
+        return $value ? 'yes' : 'no';
+    }
+
+    /** @param array<mixed> $d */
+    private static function accountText(array $d): string
+    {
+        $l = (array) ($d['limits'] ?? []);
+        $lines = ['**' . self::clean($d['email'] ?? '') . '**: plan ' . self::clean($d['plan'] ?? '')
+            . (($d['price'] ?? '') !== '' ? ', ' . self::clean($d['price']) . ' every ' . self::clean($d['recurrence'] ?? '') : ''), ''];
+        $lines[] = '- Indexes: ' . (int) ($d['indexes_total'] ?? 0) . ' of ' . (int) ($l['indexes'] ?? 0);
+        $lines[] = '- Disk per index: ' . self::mb($l['disk_per_index_mb'] ?? 0);
+        $lines[] = '- Bandwidth per index each month: ' . self::mb($l['bandwidth_per_index_mb_per_month'] ?? 0);
+        $lines[] = '- AI requests this month: ' . number_format((int) ($d['ai_requests_used_this_month'] ?? 0)) . ' of ' . number_format((int) ($l['ai_requests_per_month'] ?? 0));
+        $lines[] = '- AI and vectors: ' . self::yes($l['vectors_and_ai'] ?? false) . ', Web Crawler: ' . self::yes($l['web_crawler'] ?? false)
+            . ', Analytics: ' . self::yes($l['analytics'] ?? false) . ', Backup: ' . self::yes($l['backup'] ?? false);
+        $indexes = (array) ($d['indexes'] ?? []);
+        if ($indexes) {
+            $lines[] = '';
+            $lines[] = '| Index | Documents | Disk | Bandwidth | Server |';
+            $lines[] = '|---|---|---|---|---|';
+            foreach ($indexes as $i) {
+                $lines[] = '| ' . self::clean($i['index_name'] ?? '') . ' | ' . number_format((int) ($i['documents'] ?? 0)) . ' | ' . self::mb($i['disk_used_mb'] ?? 0)
+                    . ' | ' . self::mb($i['bandwidth_used_mb'] ?? 0) . ' | ' . self::clean($i['server'] ?? '') . ' |';
+            }
+        }
+        return implode("\n", $lines);
+    }
+
+    /** @param array<mixed> $d */
+    private static function indexText(array $d): string
+    {
+        return implode("\n", [
+            '**' . self::clean($d['index_name'] ?? '') . '**: Solr ' . self::clean($d['solr_version'] ?? '') . ' on ' . self::clean($d['server'] ?? ''),
+            '',
+            '- Disk: ' . self::mb($d['disk_used_mb'] ?? 0) . ' of ' . self::mb($d['disk_limit_mb'] ?? 0),
+            '- Bandwidth this month: ' . self::mb($d['bandwidth_used_mb'] ?? 0) . ' of ' . self::mb($d['bandwidth_limit_mb'] ?? 0),
+            '- Documents: ' . number_format((int) ($d['indexed_docs'] ?? 0)),
+            '- AI requests this month: ' . number_format((int) ($d['ai_requests_used'] ?? 0)) . ' of ' . number_format((int) ($d['max_ai_requests'] ?? 0)),
+            '- Created: ' . self::clean($d['created'] ?? '') . ', last written: ' . self::clean($d['last_written'] ?? ''),
+        ]);
+    }
+
+    /** @param array<mixed> $job */
+    private static function jobLine(array $job): string
+    {
+        $line = '- ' . self::clean($job['submitted'] ?? '') . ' · ' . self::clean($job['state'] ?? '') . ' · ' . (int) ($job['written'] ?? 0) . ' of '
+            . (int) ($job['documents'] ?? 0) . ' written, ' . (int) ($job['failed'] ?? 0) . ' failed · job ' . self::clean($job['job_id'] ?? '');
+        return ($job['error'] ?? '') !== '' && $job['error'] !== null ? $line . "\n  " . self::clean($job['error']) : $line;
+    }
+
+    /** @param array<mixed> $counts */
+    private static function counts(mixed $counts): string
+    {
+        if (!is_array($counts)) {
+            return 'no Data Ingestion jobs in the last 30 days';
+        }
+        $parts = [];
+        foreach ($counts as $state => $n) {
+            if ((int) $n > 0) {
+                $parts[] = (int) $n . ' ' . str_replace('_', ' ', (string) $state);
+            }
+        }
+        return $parts ? implode(', ', $parts) : 'no Data Ingestion jobs in the last 30 days';
+    }
+
+    /** @param array<mixed> $d */
+    private static function ingestionText(array $d): string
+    {
+        $lines = [];
+        if (isset($d['indexes'])) {
+            foreach ((array) $d['indexes'] as $i) {
+                $lines[] = '- **' . self::clean($i['index_name'] ?? '') . '**: ' . self::counts($i['jobs_by_state'] ?? null);
+                foreach ((array) ($i['latest_failed_jobs'] ?? []) as $job) {
+                    $lines[] = '  ' . self::jobLine((array) $job);
+                }
+            }
+            return $lines ? implode("\n", $lines) . "\n\nJobs are kept 30 days." : 'Your account has no indexes.';
+        }
+        if (isset($d['job_id'])) {
+            return self::jobLine($d) . (($d['result'] ?? '') !== '' ? "\n\n" . self::clean($d['result']) : '');
+        }
+        $lines[] = '**' . self::clean($d['index_name'] ?? '') . '**: ' . self::counts($d['jobs_by_state'] ?? null);
+        foreach ((array) ($d['latest_jobs'] ?? []) as $job) {
+            $lines[] = self::jobLine((array) $job);
+        }
+        return implode("\n", $lines) . "\n\nJobs are kept 30 days.";
+    }
+
+    /** @param array<mixed> $d */
+    private static function errorsText(array $d): string
+    {
+        $errors = (array) ($d['latest_errors'] ?? []);
+        if (!$errors) {
+            return 'Solr logged no errors for **' . self::clean($d['index_name'] ?? '') . '** in the last 7 days.';
+        }
+        $lines = ['**' . self::clean($d['index_name'] ?? '') . '**: ' . number_format((int) ($d['errors_found'] ?? 0)) . ' errors in the last 7 days, the latest:', ''];
+        foreach ($errors as $e) {
+            $lines[] = '- ' . self::clean($e['timestamp'] ?? '') . ' · ' . self::clean($e['level'] ?? '') . ' · ' . self::clean($e['server'] ?? '');
+            $what = ($e['message'] ?? '') !== '' ? $e['message'] : ($e['user_friendly'] ?? '');
+            $lines[] = '  ' . mb_substr(self::clean($what), 0, 400);
+        }
+        return implode("\n", $lines);
     }
 }

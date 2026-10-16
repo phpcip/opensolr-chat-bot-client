@@ -95,7 +95,8 @@ final class ChatController
             'question' => $question,
         ];
 
-        $commands = new Commands($this->api(), $this->settings, $ip);
+        $commands = new Commands($this->api(), $this->settings, $ip,
+            str_starts_with($question, '/') && AccountTools::available($this->store, $this->api()), (string) $who['email']);
         // A text to translate has its own limit, counted on the text alone
         $translation = $commands->translation($question);
         $isCommand = str_starts_with($question, '/');
