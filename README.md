@@ -364,6 +364,7 @@ HMAC with SHA-256, the key being the identity key as text and the message the em
 - **Stop.** While an answer is written, the Send button becomes Stop: it ends the answer at once, keeps what was already written (marked Stopped.) and frees the message box. The chat stops working on the question too, on your server and at Opensolr.
 - **Rating an answer.** Two buttons under every answer of the assistant and every translation: good and bad. Clicking the pressed one again takes the rating back. The rating is kept with the conversation in the browser.
 - **New chat.** Starts a new conversation.
+- **A day without a new message ends a conversation.** The visitor who comes back after it, or writes in a page left open that long, starts a new chat.
 - **History in the browser.** The conversation (its last 100 messages) is kept in the visitor's browser, survives page loads and is the same in every tab of your site. A chat window left open stays open on the next page of the same tab. With each question the assistant receives up to the 10 messages before it, without the commands.
 - **Arrow Up / Arrow Down.** Bring back the questions sent before, like a shell. Arrow Down past the newest brings back what was being written.
 - **Enter** sends, **Shift+Enter** starts a new line.

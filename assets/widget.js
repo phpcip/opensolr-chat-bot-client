@@ -14,6 +14,8 @@
   const BASE_PATH = SRC.pathname.replace(/\/widget\.js$/, '');
   const BASE = SRC.origin + BASE_PATH;
   const KEY = 'opensolr-chat:' + BASE_PATH + ':';
+  // A day without a new message ends a conversation
+  const IDLE_MS = 86400000;
   // A signed-in visitor: the email and its signature, written by the site on this script tag
   const IDENT = String(script.getAttribute('data-ident') || '').trim();
   const IDENT_SIG = String(script.getAttribute('data-ident-sig') || '').trim();
@@ -787,6 +789,7 @@
     if (!reveal()) {
       return;
     }
+    endIdle();
     if (auto) {
       return;
     }
@@ -829,7 +832,9 @@
 
   function loadConversation() {
     const c = local.get('conversation');
-    if (c && typeof c.id === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(c.id) && Array.isArray(c.messages)) {
+    // A conversation with no new message for a day is over (the Opensolr API forgets it then too): a new chat opens
+    const idle = c && typeof c.at === 'number' && Date.now() - c.at > IDLE_MS;
+    if (!idle && c && typeof c.id === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(c.id) && Array.isArray(c.messages)) {
       const messages = [];
       c.messages.forEach(function (m) {
         if (m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string') {
@@ -841,13 +846,18 @@
           });
         }
       });
-      return { id: c.id, messages: messages };
+      return { id: c.id, messages: messages, at: typeof c.at === 'number' ? c.at : Date.now(), count: messages.length };
     }
-    return { id: newId(), messages: [] };
+    return { id: newId(), messages: [], at: Date.now(), count: 0 };
   }
 
   function save() {
+    // Only a new message keeps the conversation alive, not a rating or a click
+    if (conv.messages.length !== conv.count) {
+      conv.at = Date.now();
+    }
     conv.messages = conv.messages.slice(-100);
+    conv.count = conv.messages.length;
     local.set('conversation', conv);
   }
 
@@ -991,7 +1001,7 @@
       return;
     }
     closeDialogs(false);
-    conv = { id: newId(), messages: [] };
+    conv = { id: newId(), messages: [], at: Date.now(), count: 0 };
     save();
     sent = [];
     recall = -1;
@@ -1004,11 +1014,25 @@
     caretEnd();
   }
 
+  // A conversation left a day without a new message (a page kept open) starts over as a new chat; the input stays
+  function endIdle() {
+    if (busy || !conv.messages.length || Date.now() - conv.at <= IDLE_MS) {
+      return;
+    }
+    conv = { id: newId(), messages: [], at: Date.now(), count: 0 };
+    save();
+    sent = [];
+    recall = -1;
+    renderAll();
+    updatePlaceholder();
+  }
+
   function submit() {
     const text = ui.input.value.replace(/\u00a0/g, ' ').trim();
     if (!text) {
       return;
     }
+    endIdle();
     const command = text.charAt(0) === '/';
     const translate = /^\/translate(\s|$)/i.test(text);
     const length = chars(translate ? text.replace(/^\/translate\s+\S+\s*/i, '') : text);
