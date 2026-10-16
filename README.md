@@ -220,7 +220,7 @@ Stats and History are pages of their own, described after the settings. The othe
 - Title: at the top of the chat window.
 - Text of the chat button: shown next to the icon of the button that opens the chat. Empty: the icon only. On screens up to 480 pixels wide the button shows the icon only.
 - Greeting: the first message of every conversation.
-- Placeholder: the grey text in the empty message box.
+- Placeholder: the grey text in the empty message box. The chat adds `(type / for commands)` after it.
 - Logo: shown on the chat button, in place of the chat icon, and in the header of the chat window. The image type is read from the file's content. Tick "Remove the logo" to go back to the icon.
 - Accent colour: the colour of the chat button, the header and the links.
 

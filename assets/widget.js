@@ -54,6 +54,7 @@
     newChat: 'New chat',
     newChatTitle: 'Start a new chat',
     commands: 'Commands',
+    commandsHint: '(type / for commands)',
     resize: 'Resize the chat: drag, or use the arrow keys',
     resizeTitle: 'Drag to resize',
     message: 'Your message',
@@ -914,7 +915,9 @@
   }
 
   function updatePlaceholder() {
-    ui.input.placeholder = full() ? 'This conversation has reached ' + fmt(cfg.maxQuestions) + ' questions. Start a new chat.' : cfg.placeholder;
+    // The site's own placeholder, then a hint that commands exist when the chat has any
+    ui.input.placeholder = full() ? 'This conversation has reached ' + fmt(cfg.maxQuestions) + ' questions. Start a new chat.'
+      : cfg.placeholder + (cfg.commands.length ? ' ' + T.commandsHint : '');
   }
 
   function notice(text) {
