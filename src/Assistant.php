@@ -78,7 +78,7 @@ final class Assistant
      * @param list<array{role: string, content: string}> $messages
      * @return array{text: string, code: string, searches: list<array{0: string, 1: string}>, first: ?float}
      */
-    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp): array
+    public function answer(array $messages, string $instructions, string $timezone, string $visitorIp, string $conversationId = ''): array
     {
         $flow = new MarkdownFlow();
         $failure = null;
@@ -103,12 +103,14 @@ final class Assistant
             return true;
         };
         try {
-            $this->api->stream('assistant_chat', [
+            $this->api->stream('assistant_chat', array_filter([
                 'messages' => $messages,
                 'instructions' => $instructions,
                 'timezone' => $timezone,
                 'visitor_ip' => $visitorIp,
-            ], function (array $event) use ($flow, &$failure, &$searches, $send): bool {
+                // The conversation's id: the Opensolr API keeps what its tools found for the next questions
+                'conversation_id' => $conversationId,
+            ], static fn ($v): bool => $v !== ''), function (array $event) use ($flow, &$failure, &$searches, $send): bool {
                 $type = is_string($event['type'] ?? null) ? $event['type'] : '';
                 if ($type === 'text') {
                     return $send($flow->push(is_string($event['text'] ?? null) ? $event['text'] : ''));
