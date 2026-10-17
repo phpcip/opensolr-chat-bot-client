@@ -276,8 +276,7 @@ final class ChatController
         $conversationKey = (string) ($this->meta['key'] ?? '');
         // The lock is per conversation: other people behind the same address (an office, a school) never wait for each other
         $lockKey = $conversationKey !== '' ? $limits->key('lock', $conversationKey) : $visitor;
-        $ttl = ($isTranslation ? Translator::TIMEOUT : ($isCommand ? 150 : Assistant::TIMEOUT)) + 30;
-        $token = $limits->acquire($lockKey, $ttl);
+        $token = $limits->acquire($lockKey);
         if ($token === null) {
             $out->error('Please wait for the answer to your last question.');
             return false;

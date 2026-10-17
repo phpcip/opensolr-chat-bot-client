@@ -62,22 +62,52 @@ final class Limits
         }
     }
 
+    /** The locks this request holds: token => [open file, path]. */
+    private array $held = [];
+
     /**
-     * The visitor's lock for $ttl seconds: its token, or null while another question of the visitor is answered.
+     * The visitor's lock: its token, or null while another question of the visitor is answered. It is a lock on a file,
+     * which the system frees when the process that holds it ends, however it ends (a restart, a killed worker).
      */
-    public function acquire(string $visitorKey, int $ttl): ?string
+    public function acquire(string $visitorKey): ?string
     {
-        $pdo = $this->store->pdo();
-        $now = time();
-        $pdo->prepare('DELETE FROM locks WHERE k = ? AND expires <= ?')->execute([$visitorKey, $now]);
-        $token = bin2hex(random_bytes(16));
-        $stmt = $pdo->prepare('INSERT OR IGNORE INTO locks (k, token, expires) VALUES (?, ?, ?)');
-        $stmt->execute([$visitorKey, $token, $now + $ttl]);
-        return $stmt->rowCount() === 1 ? $token : null;
+        $dir = $this->store->dir() . DIRECTORY_SEPARATOR . 'locks';
+        if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
+            throw new \RuntimeException('The locks directory cannot be created.');
+        }
+        $path = $dir . DIRECTORY_SEPARATOR . $visitorKey . '.lock';
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $fh = fopen($path, 'c');
+            if ($fh === false) {
+                throw new \RuntimeException('The lock file cannot be opened.');
+            }
+            if (!flock($fh, LOCK_EX | LOCK_NB)) {
+                fclose($fh);
+                return null;
+            }
+            // A file its holder removed between this open and this lock is no longer the lock: open it again
+            clearstatcache(true, $path);
+            $now = @stat($path);
+            if ($now !== false && $now['ino'] === fstat($fh)['ino']) {
+                $token = bin2hex(random_bytes(16));
+                $this->held[$token] = [$fh, $path];
+                return $token;
+            }
+            flock($fh, LOCK_UN);
+            fclose($fh);
+        }
+        return null;
     }
 
     public function release(string $visitorKey, string $token): void
     {
-        $this->store->pdo()->prepare('DELETE FROM locks WHERE k = ? AND token = ?')->execute([$visitorKey, $token]);
+        if (!isset($this->held[$token])) {
+            return;
+        }
+        [$fh, $path] = $this->held[$token];
+        unset($this->held[$token]);
+        @unlink($path);
+        flock($fh, LOCK_UN);
+        fclose($fh);
     }
 }
