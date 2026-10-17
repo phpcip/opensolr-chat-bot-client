@@ -33,8 +33,6 @@ final class ChatController
         private readonly Store $store,
         private readonly Settings $settings,
         private readonly Captcha $captcha,
-        /** @var list<string> */
-        private readonly array $excludeLinks = [],
     ) {
     }
 
@@ -333,6 +331,6 @@ final class ChatController
 
     private function api(): OpensolrApi
     {
-        return new OpensolrApi($this->settings->str('opensolr_email'), $this->settings->str('opensolr_api_key'), $this->settings->str('index_name'), $this->excludeLinks);
+        return new OpensolrApi($this->settings->str('opensolr_email'), $this->settings->str('opensolr_api_key'), $this->settings->str('index_name'));
     }
 }
