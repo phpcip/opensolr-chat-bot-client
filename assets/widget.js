@@ -162,6 +162,10 @@
     '.md .h{font-size:16px}',
     '.md a{color:var(--osc-accent);text-decoration:underline;text-underline-offset:2px}',
     '.md a:hover{text-decoration-thickness:2px}',
+    '.md a.pill{display:inline-block;max-width:min(100%,24em);box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;margin:1px 0;padding:0 10px;border:1px solid #e5e1da;border-radius:999px;background:#f7f5f2;color:#4a4540;font-size:14px;line-height:1.6;text-decoration:none}',
+    '.md a.pill *{font-weight:inherit;font-style:inherit}',
+    '.md a.pill:hover,.md a.pill:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent);text-decoration:none}',
+    '.tip{position:fixed;z-index:3;max-width:320px;padding:6px 10px;border-radius:2px;background:#1f1d1a;color:#ffffff;font-size:14px;line-height:1.4;overflow-wrap:anywhere;pointer-events:none}',
     '.md .md-sources{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #e5e1da}',
     '.md .md-sources a{display:block;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 12px;border:1px solid #e5e1da;border-radius:999px;background:#f7f5f2;color:#4a4540;font-size:14px;line-height:1.5;text-decoration:none}',
     '.md .md-sources a:hover,.md .md-sources a:focus-visible{border-color:var(--osc-accent);color:var(--osc-accent);text-decoration:none}',
@@ -639,6 +643,11 @@
     }, { passive: true });
     ui.log.addEventListener('click', onLinkOpen);
     ui.log.addEventListener('auxclick', onLinkOpen);
+    ui.log.addEventListener('mouseover', onTip);
+    ui.log.addEventListener('focusin', onTip);
+    ui.log.addEventListener('mouseout', hideTip);
+    ui.log.addEventListener('focusout', hideTip);
+    ui.log.addEventListener('scroll', hideTip, { passive: true });
     body.appendChild(ui.log);
 
     ui.foot = el('div', 'foot');
@@ -680,9 +689,13 @@
     ui.status.setAttribute('aria-live', 'polite');
     ui.mirror = el('div', 'mirror');
     ui.mirror.setAttribute('aria-hidden', 'true');
+    ui.tip = el('div', 'tip');
+    ui.tip.setAttribute('aria-hidden', 'true');
+    ui.tip.hidden = true;
     ui.root.appendChild(panel);
     ui.root.appendChild(ui.status);
     ui.root.appendChild(ui.mirror);
+    ui.root.appendChild(ui.tip);
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -1209,20 +1222,30 @@
       }
       const a = anchor(url);
       a.textContent = m[1];
-      a.title = m[1];
       box.appendChild(a);
     }
     return box.childNodes.length ? { body: text.slice(0, at), box: box } : null;
   }
 
+  // Every link of an answer is a pill: its text cut to the pill, the whole of it in the tooltip
+  function pills(node) {
+    node.querySelectorAll('a[href]').forEach(function (a) {
+      a.classList.add('pill');
+      a.setAttribute('data-tip', (a.textContent || a.href).trim());
+      a.removeAttribute('title');
+    });
+  }
+
   function fill(node, text, products) {
     node.textContent = '';
+    hideTip();
     try {
       const src = sources(String(text));
       node.appendChild(markdown(src ? src.body : text));
       if (src) {
         node.appendChild(src.box);
       }
+      pills(node);
       thumbs(node, products);
     }
     catch (e) {
@@ -2612,6 +2635,27 @@
     }
     catch (e) {
       return null;
+    }
+  }
+
+  // The tooltip of a pill: its whole text, above it (below when there is no room), kept inside the window
+  function onTip(e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[data-tip]') : null;
+    if (!a || !ui.tip) {
+      return;
+    }
+    ui.tip.textContent = a.getAttribute('data-tip');
+    ui.tip.hidden = false;
+    const r = a.getBoundingClientRect();
+    const t = ui.tip.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - t.width - 8));
+    const top = r.top - t.height - 6 >= 8 ? r.top - t.height - 6 : r.bottom + 6;
+    css(ui.tip, { left: left + 'px', top: top + 'px' });
+  }
+
+  function hideTip() {
+    if (ui.tip) {
+      ui.tip.hidden = true;
     }
   }
 
