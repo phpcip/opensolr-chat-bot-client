@@ -724,6 +724,7 @@
     ui.input.addEventListener('keydown', onKey);
     ui.input.addEventListener('blur', function () { setTimeout(hideMenu, 150); });
     panel.addEventListener('keydown', onEscape);
+    panel.addEventListener('keydown', onCtrlC);
     bindGrip();
 
     renderAll();
@@ -765,6 +766,23 @@
     if ((k === 'ArrowUp' || k === 'ArrowDown') && plain && !busy && browse(k === 'ArrowUp')) {
       e.preventDefault();
     }
+  }
+
+  // Ctrl+C stops the answer being written, as in a terminal; with text selected it copies, as always
+  function onCtrlC(e) {
+    if (!stopAnswer || !e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing || (e.key !== 'c' && e.key !== 'C')) {
+      return;
+    }
+    const t = e.target;
+    if (t && typeof t.selectionStart === 'number' && t.selectionStart !== t.selectionEnd) {
+      return;
+    }
+    const sel = typeof root.getSelection === 'function' ? root.getSelection() : window.getSelection();
+    if (sel && String(sel) !== '') {
+      return;
+    }
+    e.preventDefault();
+    stopAnswer();
   }
 
   function onEscape(e) {

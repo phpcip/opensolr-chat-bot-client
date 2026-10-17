@@ -373,6 +373,7 @@ HMAC with SHA-256, the key being the identity key as text and the message the em
 - **Resize.** Drag the corner at the top left of the window, or focus it and use the arrow keys. The size is kept in the browser.
 - **Phones.** On screens up to 480 pixels wide the chat fills the screen and stays above the on-screen keyboard.
 - **Escape** steps back: from the table of language codes to the command list, then closes the list, then the chat window.
+- **Ctrl+C** stops the answer being written, like the Stop button. With text selected, it copies the text as usual.
 - **Clear errors.** A message that is too long, a full conversation, a lost connection, an answer that stops coming for 45 seconds or takes more than 3 minutes: each is said in the chat window.
 
 The buttons and messages of the widget, and the answers of the commands, are in English. The title, the button text, the greeting and the placeholder are the ones you write in the admin.
