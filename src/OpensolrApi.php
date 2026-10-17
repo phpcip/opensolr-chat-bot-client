@@ -23,6 +23,8 @@ final class OpensolrApi
         private readonly string $email,
         private readonly string $apiKey,
         private readonly string $indexName,
+        /** @var list<string> Link prefixes kept out of the chat's searches and answers (config exclude_links) */
+        private readonly array $excludeLinks = [],
     ) {
     }
 
@@ -40,6 +42,9 @@ final class OpensolrApi
     public function call(string $endpoint, array $params = [], int $timeout = 60): array
     {
         $fields = ['email' => $this->email, 'api_key' => $this->apiKey] + $params;
+        if ($endpoint === 'vdb_search' && $this->excludeLinks) {
+            $fields['exclude_links'] = json_encode($this->excludeLinks, JSON_UNESCAPED_SLASHES);
+        }
         return $this->post($this->aiUrl($endpoint), http_build_query($fields), 'application/x-www-form-urlencoded', $timeout);
     }
 
@@ -101,6 +106,9 @@ final class OpensolrApi
      */
     public function stream(string $endpoint, array $body, callable $onEvent, int $timeout, ?callable $alive = null): void
     {
+        if ($endpoint === 'assistant_chat' && $this->excludeLinks) {
+            $body['exclude_links'] = $this->excludeLinks;
+        }
         $url = $this->aiUrl($endpoint);
         $state = ['status' => 0, 'type' => '', 'buffer' => '', 'body' => '', 'stopped' => false, 'reason' => null, 'error' => null];
         $started = microtime(true);

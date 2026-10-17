@@ -29,12 +29,14 @@ final class App
     private ?Settings $settings = null;
     /** @var array{account: array<string, string>, public_url: string, sso: callable(string): bool, extra_hosts: list<string>}|null */
     private ?array $hosted = null;
+    /** @var list<string> Link prefixes the chat never searches nor answers from (config exclude_links) */
+    private array $excludeLinks = [];
 
     /**
      * A hosted chat (config hosted): its host gives the account (email, API key, index), the public origin of its
      * URLs and the check of a one-time sign-in token; the admin has no password and no captcha.
      *
-     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>, hosted?: array{account: array<string, string>, public_url: string, sso: callable(string): bool, extra_hosts?: list<string>}} $config
+     * @param array{data_dir?: string, base_path?: string, trusted_proxies?: list<string>, exclude_links?: list<string>, hosted?: array{account: array<string, string>, public_url: string, sso: callable(string): bool, extra_hosts?: list<string>}} $config
      */
     public function __construct(array $config)
     {
@@ -42,6 +44,11 @@ final class App
         $base = '/' . trim((string) ($config['base_path'] ?? ''), '/');
         $this->basePath = $base === '/' ? '' : $base;
         $this->trustedProxies = array_values(array_filter(array_map('strval', (array) ($config['trusted_proxies'] ?? [])), static fn (string $p): bool => $p !== ''));
+        foreach (array_slice((array) ($config['exclude_links'] ?? []), 0, 10) as $link) {
+            if (is_string($link) && preg_match('#^https?://\S{1,300}$#i', $link)) {
+                $this->excludeLinks[] = $link;
+            }
+        }
         if (isset($config['hosted'])) {
             $h = $config['hosted'];
             $url = rtrim((string) ($h['public_url'] ?? ''), '/');
@@ -140,7 +147,7 @@ final class App
             $out = new EventStream();
             $out->open();
             try {
-                $chat = new ChatController($request, $this->store(), $this->settings(), new Captcha($this->settings(), $this->store(), $cookiePath));
+                $chat = new ChatController($request, $this->store(), $this->settings(), new Captcha($this->settings(), $this->store(), $cookiePath), $this->excludeLinks);
             } catch (\Throwable $e) {
                 error_log('Opensolr Chat Bot: ' . $e->getMessage());
                 $out->error(Assistant::FAILED);

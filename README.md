@@ -103,6 +103,7 @@ Change the `require` path if your `vendor/` folder is somewhere else.
 | `data_dir` | Required. The data folder from step 2. |
 | `base_path` | The URL path the chat answers on. It must be the URL path of the folder that holds `index.php`. |
 | `trusted_proxies` | Optional. A list of IP addresses or CIDR ranges of your own reverse proxies, load balancers or CDN. Only requests from them have their `X-Forwarded-For` (the visitor's IP address) and `X-Forwarded-Proto` (HTTPS) believed. Leave it out when visitors reach your web server directly. |
+| `exclude_links` | Optional. Up to 10 address prefixes (full `https://...` addresses) of pages the chat never searches, reads or answers from, for example `['https://example.com/changelog/']`. The site's own search is not affected. |
 
 With a reverse proxy in front of PHP, set `trusted_proxies`, otherwise every visitor is counted under the proxy's IP address and shares one set of limits:
 
