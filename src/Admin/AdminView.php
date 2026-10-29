@@ -76,10 +76,13 @@ CSS;
         return self::e(I18n::t($text, $vars));
     }
 
+    /** The tab icon of the admin pages: a chat bubble on the Opensolr accent. */
+    private const FAVICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjIxIDIxIDY2IDY2Ij48cmVjdCB4PSIyMSIgeT0iMjEiIHdpZHRoPSI2NiIgaGVpZ2h0PSI2NiIgcng9IjYiIGZpbGw9IiNjMDU1MjAiLz48cGF0aCBkPSJNMzUgMzRoMzhhNCA0IDAgMCAxIDQgNHYyNmE0IDQgMCAwIDEtNCA0SDUxbC0xMiAxMFY2OGgtNGE0IDQgMCAwIDEtNC00VjM4YTQgNCAwIDAgMSA0LTR6IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjQyIiBjeT0iNTEiIHI9IjMuNSIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjU0IiBjeT0iNTEiIHI9IjMuNSIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjY2IiBjeT0iNTEiIHI9IjMuNSIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==';
+
     public static function page(string $title, string $body, string $css = ''): string
     {
         return '<!doctype html><html lang="' . self::e(I18n::lang()) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-            . '<meta name="robots" content="noindex, nofollow"><title>' . self::e($title) . '</title><style>' . self::CSS . $css . '</style></head>'
+            . '<meta name="robots" content="noindex, nofollow"><title>' . self::e($title) . '</title><link rel="icon" type="image/svg+xml" href="' . self::FAVICON . '"><style>' . self::CSS . $css . '</style></head>'
             . '<body><main>' . $body . '</main></body></html>';
     }
 
